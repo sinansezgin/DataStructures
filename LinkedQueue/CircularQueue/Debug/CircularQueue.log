@@ -1,0 +1,7 @@
+﻿  Queue.c
+f:\dosyalar\visualstudioworkspace\c\linkedqueue\circularqueue\queue.c(30): warning C4133: '=': incompatible types - from 'NODE *' to 'tagNode *'
+f:\dosyalar\visualstudioworkspace\c\linkedqueue\circularqueue\queue.c(46): warning C4133: '=': incompatible types - from 'tagNode *' to 'NODE *'
+f:\dosyalar\visualstudioworkspace\c\linkedqueue\circularqueue\queue.c(67): warning C4133: '=': incompatible types - from 'tagNode *' to 'NODE *'
+f:\dosyalar\visualstudioworkspace\c\linkedqueue\circularqueue\queue.c(83): warning C4133: '=': incompatible types - from 'tagNode *' to 'NODE *'
+  CircularQueue.vcxproj -> F:\Dosyalar\VisualStudioWorkspace\C\LinkedQueue\Debug\CircularQueue.exe
+  CircularQueue.vcxproj -> F:\Dosyalar\VisualStudioWorkspace\C\LinkedQueue\Debug\CircularQueue.pdb (Full PDB)
