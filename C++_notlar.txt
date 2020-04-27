@@ -17597,4 +17597,373 @@ runtime'da out_of_range türünden deðil. Öyle olsaydý burasý yine yakalardý. reth
 tekrar göndermek arasýnda ciddi bir var. rethrow edildiðinde polimorfik, dinamik tür korunur. Ancak ayný nesne 
 gönderildiðinde artýk o polimorfik tür bilgisi ortadan kaybolur.
 
-4 þubat 2018 pazar, Ders2_1 Dakika 5
+En çok yapýlan iþlerden biri de, hata yakalanýr, yine bir hata nesnesi gönderilir. Ancak gönderilen hata nesnesi 
+baþka bir türden. Bazý durumlarda alt katmanlardaki kodlar tipik olarak bir hatayý yakalayýp kýsmi olarak müdahale
+ettikleri zaman kendileri de daha yukarýdaki katmanlara onlarýn anlayacaðý dilden bir exception gönderir.
+Örnek olarak bir GUI programý düþünülsün, ortada bir Text editör var ve text editore yazý yazýlamýyor. Aþaðýdaki
+katmanlardan gelen hata ise bellek ile ilgili bir problemden dolayý oluþan segmentation fault. Gelen bu hata yakalanýr
+ve üst katmanlara bu hali ile deðil daha farklý bir þekilde iletilebilir.
+
+void f()
+{
+	try{
+		///
+	}
+	catch(bad_alloc &){
+		////
+		throw BadTextInfo;	
+	}
+}
+
+f içinde bad_alloc türünden bir hata nesnesi yakalanýr, içeride gerekli iþlemler yapýlýr sonuç olarak ise BadTextInfo 
+isminde bir hata nesnesi throw edilir. f fonksiyonunu çaðýran için BadTextInfo anlamlý ancak daha alt katmandaki hata
+kategorileri f'i çaðýran için anlamlý ve müdahale edilebilir deðil. Bu sebeple daha alt katmanlardaki hata yakalayan
+kodlar hatayý yakaladýklarý zaman birçok durumda var olan exception object'i göndermezler, kendileri yeni bir exception
+nesnesi oluþturup, bunu daha üst seviye bilgi ile donatýp kendilerinden daha yukarýdaki katmana bunu bildirirler.
+Buna popüler olarak exception translation denir; baþka bir exception alýndý ancak onu göndermek yerine daha yukarýdaki
+kodlara farklý bir exception gönderildi.
+
+Bunlar dýþýndakiler artýk pek olaðan durumlar deðil, ya program terminate edilir, ya rethrow edilir veya translate edilir.
+Genel olarak bunlardan biri yapýlýr.
+
+
+Constructors and Exceptions
+
+En fazla exception göndermeye aday fonksiyon constructor. Kodu çalýþacak, bir nesneyi hayata getirecek fakat o süreç içinde 
+beklenmeyen bir durum olduðunda nesne hayata gelemeyecek. Bu durumda daha yukarýdaki kodlarý bundan haberdar etmesi gerekecek.
+DatabaseConnection türünden bir nesne hayata gelecek ki bu connection saðlansýn. Ancak nesne hayata gelemiyorsa o nesneyi hayata
+getiren açýsýndan bakýldýðýnda veritabaný baðlantýsýnýn yapýlamadýðý anlamýna gelecek. Diðer fonksiyonlar bazý nedenlerden dolayý
+exception kullanmayabilir, geri dönüþ deðeri ile hatayý iletme durumunda olabilirler. Constructor'ýn böyle bir imkaný da yok.
+Geri dönüþ deðeri kavramý yok, geri dönüþ deðeri mekanizmasý ile hata döndürme gibi bir durumu da yok. Constructor'ýn kodundan
+exception gönderilmesi kadar doðal bir durum yok. Destructor'dan ise exception gönderilmemeli, gönderilecekse de dýþarý sýzmamalý.
+(Kendi içerisinde handle edilsin, yakalansýn)
+
+Örnek olarak Fraction sýnýfý, paydanýn 0 olacaðý bir Fraction nesnesi yaratýlmaya çalýþýldýðýnda, ideali constructor'ýn bir 
+exception throw etmesi.
+
+Bir sýnýfýn constructor'ýnýn kodu yazýlýyor:
+Fighter::Fighter()
+{
+	/////codes
+
+	throw x;
+
+	/////
+}
+Eðer bu constructor'ýn çalýþmasý durumunda programýn akýþý bu throw ifadesini görmezse, kod sonuna kadar çalýþýr. Constructor'un
+kodu tamamlanýr ve nesne hayata gelir. Eðer exception throw ederse hayata gelen bir nesne olmayacak. Bir nesnenin hayata gelmesi
+için constructor'ýn kodunun çalýþmasý gerekir.
+Exception nedeni ile throw x; ifadesi ile koddan çýkýldýðý düþünülsün. Hayata gelememiþ, bu Fighter nesnesi için destructor çaðrýlmaz.
+Önemli kurallardan biri, bir constructorýn kodunun içinden exception throw edildiði için çýkýlýrsa hayata gelememiþ *this için 
+kesinlikle destructor çaðrýlmaz.
+
+Exception güvenliði düþünüldüðünde, tüm exceptionlar yakalanmalý ve destructor'ý çaðýrýlmasý gereken bütün nesnelerin destructor'ý
+çaðrýlmalý. Çünkü eðer bir nedenden dolayý destructor'ý gerekli bazý iþlemleri yapan(kaynaklarý geri veren) bir destructor 
+çaðrýlmazsa ortada sorunlu bir durum var demektir. Ýdeal durum, hayata gelmiþ tüm nesneler için destructor'ýn çaðrýlmasý.
+
+
+//////////////////////////////////////////////////////////////////
+class Fighter {
+public:
+	Fighter(int x)
+	{
+		cout << "constructor" << endl;
+		if(x>10)
+			throw 1;
+	}
+	~Fighter()
+	{
+		cout << "destructor" << endl;
+	}
+};
+int main(void) {
+
+	Fighter f{ 50 };
+
+	return 0;
+}
+//////////////////////////////////////////////////////////////////
+Kodda görüldüðü üzere exception gönderilir, ancak destructor çaðrýlmaz.
+Çaðrýlmamasýnýn nedeni hatanýn yakalanmamasý deðil, nesnenin zaten hayata gelmemiþ olmasý.
+
+
+Burada ise nesne dinamik olarak hayata geliyor.
+Dinamik nesne için constructor çaðrýlýr ve exception throw eder.
+Bu durumda, dinamik nesne için aslýnda geri planda bir dinamik bellek alaný elde edilir, bunu elde eden
+new karþýlýðý derleyicinin ürettiði kod, operator new fonksiyonu.
+Ardýndan bu adresle constructor çaðrýlýr o da exception throw eder. Normalde bu nesne delete edilecekti ve 
+bellek alaný geri verilecekti ve de destructor çaðrýlacaktý.
+Burada ise destructor çaðrýlmadýðýndan nesne hayata gelmedi. Peki o ayrýlan bellek alaný ne olacak ?
+Dil bu bellek alanýnýn geri verileceðinin garantisini verir. Dinamik nesne new operatörü ile oluþturulursa
+dinamik nesne için çaðrýlan ctor exception throw ederse, zaten ortada çaðrýlacak bir destructor yok(nesne 
+hayata gelmedi) ortadaki bellek bloðunu derleyici geri verir(kendi ürettiði kodla). 
+//////////////////////////////////////////////////////////////////
+class Fighter {
+public:
+	Fighter(int x)
+	{
+		cout << "constructor" << endl;
+		if(x>10)
+			throw 1;
+	}
+	~Fighter()
+	{
+		cout << "destructor" << endl;
+	}
+};
+
+int main(void) {
+
+	try {
+		auto p = new Fighter{ 50 };
+	}
+	catch (int) {
+		cout << "hata main icinde yakalandi" << endl;
+	}
+	return 0;
+}
+//////////////////////////////////////////////////////////////////
+
+
+Peki ya constructor'ýn kodunda, throw edilmeden önce bir kaynak elde edilmiþse bundan tabiki de
+programcýnýn kendisi sorumlu. Constructor throw etmeden, ctor kodu içinde kaynaklar elde edilmiþse,
+bu kaynaklar normal pointerlara baðlandýysa bunlarý delete etmek programcýnýn iþi. Constructor da olsa
+raw pointer kullanýlmamalý. Hiç kaynak sýzýntýsý olmamasý için nesnenin kullandýðý kaynaklar akýllý
+pointerlara baðlanmalý. Bu durumda kaynaklar raw pointerlara baðlandýðýnda, pointer deðerini alýr ancak
+normalde bu pointerý delete edecek olan destructor. Exception throw edilmesinden dolayý destructor 
+çaðrýlmayacaðýndan kaynak geri verilmemiþ olur. Kaynaklar normal pointerlara baðlanmadýðý sürece 
+ortada bir problem yok.
+
+
+Fighter sýnýfýnýn elemanlarýndan biri Anyclass türünden olsun. Bu durumda bir Fighter nesnesi hayata	
+geldiðinde Anyclass nesnesi de hayata gelir. Fighter'ýn constructor'u burada yine exception throw eder.
+Bu noktada Anyclass nesnesi hayata gelmiþ olur, bununla ilgili de ortada problemli bir durum yok.
+Hayata gelenlerin hepsi destruct edilir. Dikkat edilmesi gereken programýn akýþý constructor'ýn koduna
+girdiðinde eðer bu noktaya kadar bazý nesneler hayata gelmiþ ancak dinamik olarak hayata gelmiþ ve raw
+pointerlara baðlanmýþsa bunlarýn delete edilmesinden programcý sorumlu.
+//////////////////////////////////////////////////////////////////
+class Anyclass {
+
+};
+
+class Fighter {
+	Anyclass mx;
+public:
+	Fighter(int x)
+	{
+		cout << "constructor" << endl;
+		if(x>10)
+			throw 1;
+	}
+	~Fighter()
+	{
+		cout << "destructor" << endl;
+	}
+};
+//////////////////////////////////////////////////////////////////
+Fighter sýnýfýnýn construct'ý çalýþtýrýldýðýnda, o da Anyclass sýnýfýnýn constructor'ýný çalýþtýrýr. 
+Anyclass'ýn constructor'ý exception throw ederse: Bu durumda member hayata gelmemiþ demektir dolayýsý
+ile member için destructor çaðrýlmaz. Fighter da bu durumda hayata gelmemiþ olacak, ikisi için de 
+destructor çaðrýlmaz.
+
+
+Aþaðýdaki gibi ayný veya farklý sýnýf türünden iki öðe var. mx hayata geldi ancak my için çaðrýlan
+constructor exception throw etti. Yine ortada problemli bir durum yok. my için ve Fighter için destructor
+çaðrýlmaz ancak mx için çaðrýlýr.
+//////////////////////////////////////////////////////////////////
+class Anyclass {
+
+};
+
+class Fighter {
+	Anyclass mx, my;
+public:
+	Fighter(int x)
+	{
+		cout << "constructor" << endl;
+		if(x>10)
+			throw 1;
+	}
+	~Fighter()
+	{
+		cout << "destructor" << endl;
+	}
+};
+//////////////////////////////////////////////////////////////////
+
+Yani constructor'dan exception göndermek konusunda tereddüt edilecek bir durum yok.
+
+
+Ancak problemli bir durum var. Bu problemli duruma karþý ise dilin ilginç bir aracý var.
+Member olarak kullanýlan bir sýnýf var ve bu sýnýf exception gönderme potansiyelinde.
+Bir de Owner sýnýfý var, Member sýnýfý türünden bir öðesi var.
+//////////////////////////////////////////////////////////////////
+class Member {
+public:
+	Member(int x)
+	{
+		cout << "Member constructor" << endl;
+		if (x > 100)
+			throw 1;
+	}
+};
+
+class Owner {
+	Member mx;
+public:
+	Owner(int val) : mx{val}
+	{
+		/*try{
+		}*/
+	}
+};
+
+int main(void) {
+
+	Owner ox{ 325 };
+
+	return 0;
+}
+//////////////////////////////////////////////////////////////////
+Bir Owner nesnesi yaratýlýrken onun Member'i construct edilmeye çalýþýldýðýnda bu örnekte olduðu gibi
+Member'in constructor'ý exception throw ederse Owner'ýn ve Member'in destructor'ýnýn çalýþmayacaðýný 
+biliyoruz. Bu hata programcý olarak main içinde yakalanabilir. 
+Peki bir nedenden dolayý constructor bu hatayý yakalamak istiyorsa ? Constructor'ýn memberlarýndan biri
+exception throw ederse, bu exception nasýl yakalanýr ?
+Owner'ýn constructor'ý, Member'in constructor'ýndan gönderilecek hata nesnesini yakalamak için ne yapmalý ?
+Bir try bloðu oluþturulacaksa yapýlabilecek en iyi þey fonksiyonun tüm kodunu try bloðu içine yazmak ancak
+burada bu da geçerli deðil. Member'ýn hayata gelmesi, Owner'ýn constructor'unun kodu içinde olmuyor ki.
+Programýn akýþý constructor'ýn kodu içine geldiðinde Member zaten hayata gelmiþ durumda. Member'in ctor'u
+exception throw ederse zaten try bloðu içindeki kod hiç çalýþmaz.
+
+Ýþte bunun için function try blok isminde bir araç dile eklendi(2000'lerin baþýnda)
+Function try blok, main de dahil olmak üzere herhangi bir fonksiyona uygulanabilecek bir sentaks ancak
+kesinlikle varlýk nedeni üstte bahsedilen duruma problem getirmek.
+Normal yukarýda yoruma alýndýðý þekliyle bir try bloðu oluþturulduðu zaman, Member'larýn constructor'ýnýn
+çalýþma kodu bu try bloðunun dýþýnda kalýyor ama function try blok oluþturulduðunda onu da try bloðunun
+içine katabilme imkanýmýz var. Bir member'ýn gönderdiði exception'ý, o Member'a sahip olan sýnýfýn 
+constructor'ýnýn kodunun yakalayabilmesinin tek yolu function try blok.
+
+
+Normal fonksiyonlar için function try bloðu:(Normal bir fonksiyon söz konusu olduðunda görsellikten baþka
+fazla da bir katkýsý yok)
+Bir fonksiyonun gövdesinin tamamý try blok içine alýnmak isteniyor, fonksiyonun içine hiç kod yazýlmaz.
+//////////////////////////////////////////////////////////////////
+void func()
+{
+	try {
+
+	}
+	catch (int x) {
+
+	}
+}
+//////////////////////////////////////////////////////////////////
+Bütün kod try bloðu olsun istenirse, function try blok kullanýlmazsa bu þekilde yazýlabilir.
+
+Function try blok ise þöyle bir sentaks hakký verir: Fonksiyonun ana bloðu ile try bloðu ayný, tekrar yazýlmaz.
+ //////////////////////////////////////////////////////////////////
+void func()
+try
+{
+
+}
+catch (int x) {
+
+}
+//////////////////////////////////////////////////////////////////
+main dahil herhangi bir fonksiyona function try blok uygulanabilir.
+Ancak function try bloðun varlýk nedeni bu deðil. Varlýk nedeni Member'larýn ctor'undan gönderilen exceptionlarý
+yakalama isteði.
+
+
+//////////////////////////////////////////////////////////////////
+class Member {
+public:
+	Member(int x)
+	{
+		cout << "Member constructor" << endl;
+		if (x > 100)
+			throw 1;
+	}
+};
+
+class Owner {
+	Member mx;
+public:
+	Owner(int val) : mx{val}
+	{
+		try {
+
+		}
+		catch (int x) {
+			cout << "hata Owner ctor icinde yakalandi" << endl;
+			throw;
+		}
+	}
+};
+
+int main(void) {
+
+	Owner ox{ 299 };
+
+	return 0;
+}
+//////////////////////////////////////////////////////////////////
+Kod Owner sýnýfýnýn constructor'ý içindeki try bloðuna gelmez bile.
+Buradaki gibi bir ctor'un tüm kodu bir try bloðu içine yazýlsa ona catch konsa, Memberlarýn constructorlarýndan
+gelen exception yakalanamaz. Eðer yakalansaydý programýn akýþý catch bloðunun içine girecekti.
+
+Owner sýnýfýnýn constructor'ý aþaðýdaki gibi function try blok içine alýndýðýnda hatanýn yakalandýðý görülür.
+//////////////////////////////////////////////////////////////////
+class Member {
+public:
+	Member(int x)
+	{
+		cout << "Member constructor" << endl;
+		if (x > 100)
+			throw 1;
+	}
+};
+
+class Owner {
+	Member mx;
+public:
+	Owner(int val) try : mx{ val }
+	{
+
+	}
+	catch (int x) {
+		cout << "hata Owner ctor icinde yakalandi.." << endl;
+		throw;
+	}
+};
+
+int main(void) {
+
+	try {
+		Owner ox{ 299 };
+	}
+	catch (int x)
+	{
+		cout << "hata main icinde yakalandi" << endl;
+	}
+	return 0;
+}
+//////////////////////////////////////////////////////////////////
+
+
+Tipik bir C++ sisteminde ki buna standart kütüphane sýnýflarý da dahil, sýnýflar exception safety açýsýndan
+üçe ayrýlýr. Kategoriler 1)weak garanti 2)strong garanti 3)no throw garanti
+En iyi durum no throw garantisi. Burada exception throw ettirilmeyeceðinin garantisi verilir. Her halükarda 
+fonksiyon iþini yapacak. Ýlgili sýnýfýn kendisinden kaynaklanan faaliyetlerden hiçbir þekilde exception
+throw edilmeyeceðinin garantisi verilir. Yani bu sýnýf ile ilgili hiçbir nedenden dolayý bir try bloðu
+oluþturulmak zorunda deðiliz. Sýnýf iþini yapacak.
+Strong garanti ise, exception gönderilebilir ama exception yakalandýktan sonra kodlar hala kullanýlabilir 
+durumda. Ayný deðer garanti edilmiyor ancak kullanýlabilirliði garanti. Örnek olarak bir vektör nesnesi 
+exception throw etti ancak o vektör hala kullanýlabilir.
+Weak garanti ise, kaynak sýzdýrmama garantisi verir. Tüm edinilen kaynaklar geri verilir. Ancak tekrar
+kullanýlamaz. Exception yakalandýðýnda bellek sýzýntýsý olmayacak ama nesnenin tekrar kullanýlmasý mümkün
+deðil.
+
+4 þubat 2018 pazar Ders3_1
