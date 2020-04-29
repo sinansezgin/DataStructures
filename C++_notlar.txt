@@ -17966,4 +17966,712 @@ Weak garanti ise, kaynak sýzdýrmama garantisi verir. Tüm edinilen kaynaklar geri
 kullanýlamaz. Exception yakalandýðýnda bellek sýzýntýsý olmayacak ama nesnenin tekrar kullanýlmasý mümkün
 deðil.
 
-4 þubat 2018 pazar Ders3_1
+
+
+Destructors and Exceptions
+
+Destructor exception göndermemeli. Exception'ýn dýþarý sýzmasý deðil, bir destructor'ýn exception göndermesi
+durumu dahi sýradýþý. Çok sýradýþý bir senaryoda exception gönderilme ihtiyacý olursa da o exception dýþarý
+çýkmamalý, destructor'ýn kodu exception'ý yakalamalý.
+Constructor için bu kadar doðal olan bir durum neden destructor'a gelindiðinde hiç gönderilmemeli ?
+Destructor bir nesnenin hayatý bittiðinde sonlanýyor, çaðrýldý ve de nesnenin kaynaklarý geri verildi. 
+Bir nedenden dolayý kaynaklar geri verilememiþ olsun ve exception gönderdi. Exception'ý yakalayan ne 
+yapabilir ki ? Kaynaklarý destructor geri veremiyorken hatayý yakalayan kodun bunu yapmasý mümkün deðil.
+Lojik olarak destructor'ýn göndereceði exception'dan bir fayda ummak doðru deðil.
+
+Destructor bir nesnenin hayatý sonlanacaðý zaman çaðrýlýr. Peki bir nesnenin hayatý neden sonlandýrýlýr ?
+Blok sonuna gelinmiþtir, destructor çaðrýlmýþtýr veya delete operatörü kullanýlýp destructor çaðrýlmýþtýr.
+Ancak baþka bir durum daha var zaten exception gönderilmiþtir, bu exception yakalanmýþtýr, handle edilecektir.
+Stack unwinding süreci devam etmektedir, stack'deki yerel nesneler için destructor çaðrýlmaktadýr. 
+Zaten stack unwinding'in bütün faydasý, beklentisi hayata gelen nesneler destroy edilsin ki kaynaklarý geri
+verilsin. Þimdi bu nedenle çaðrýlmýþ bir destructor bir de exception throw ederse, kaynaklar nasýl geri
+verilecek ? Hayatta olan nesnelerin destructorlarýnýn çaðrýlma süreci sekteye uðramýþ olur.
+
+Stack unwinding sürecinde bir hata yakalanmýþ, stack unwinding yapýlmýþ, stackdeki yerel nesnelerden birinin 
+destructor'ý çaðrýlýyor ama o destructor'da yine exception throw ediyor. Zaten exception yakalandý da buraya
+gelindi, bir de yine exception throw ediliyor. Ýþte bu durumda terminate fonksiyonu çaðrýlýr.
+Terminate'in çaðrýlma senaryolarýna bir de bu eklenir. Exception handle edilirken stack unwinding sürecinde bir
+nesnenin destructor'ý çaðrýlmýþsa ve çaðrýlan destructor yine exception throw etmiþse ve bu exception destructor'dan
+dýþarý çýkmýþsa derleyici terminate fonksiyonunu çaðýrýr. Bu durumda destructor içinde exception göndermek hele 
+bir de stack unwinding'de sürecinde çaðrýlmasý sonuç tam bir felaket. 
+
+
+
+R.T.T.I (Run Time Type Identification)
+
+Polimorfik türler söz konusu olduðunda bir nesnenin statik türü ile dinamik türü farklý olabiliyor.
+void carGame(car *ptr); buradaki *ptr nesnesi compiler'in compile time sürecinde yaptýðý kontrolelr açýsýndan Car
+türünden ama runtime davranýþý yani dinamik açýdan bakýldýðýnda bir Bmw de Audi de olabilir. Nesne yönelimli 
+programlamanýn runtime polimorfizm ile ilgili araçlarý þöyle bir avantaj saðlamaya yönelik: programcý zaten bu
+polimorfik iþlemede nesnenin türünün ne olduðunu bilmek zorunda deðil. Zaten nesnenin türünün ne olduðuna baðlý 
+olarak bir kod yazýlýyorsa ortada doðru olmayan bir durum var çünkü bu yapýlýrsa eski kodlarýn yeni kodlarý kullanma
+avantajý tamamen ortadan kalkar. Yani örnek olarak carGame fonksiyonu için buraya gelen araba Mercedes ise þu yapýlsýn,
+Bmw ise bu yapýlsýn, yani dinamik türe göre iþ yapýlacaksa ortada nesne yönelimli programlamanýn kullanýmý ile ilgili 
+bir problem var. Burada nesnenin türü bilinmek zorunda olursa, buraya yeni türler geldiðinde burasý da sürekli update
+edilmeli. Amaç zaten bundan kurtulmak.
+
+Ancak öyle durumlar var ki kötü tasarýmdan deðil, mecburiyetten nesnenin türünü öðrenmek zorunda kalýyoruz. 
+Kodlar programcýda olmadýðý için, yani bazý iþleri yapmak için kaynak koda ihtiyaç var ancak kaynak kod verilmemiþ. 
+Dolayýsýyla kaynak koda müdahale edilme imkaný olmadýðýndan geriye kalan ihtimal nesnenin türünün öðrenilmesi.
+Yani öyle durumlar var ki bu istenmese de nesnenin türünün ne olduðunu öðrenmeye yönelik dilsel bir araç iþimizi 
+kolaylaþtýrýr. Çalýþma zamanýnda tür belirlenmesi öyle günlük, sürekli kullanýlacak bir araç deðil. Kullanýlmasý için
+ortada bir zorunluluk, bir sýkýþma durumu olmasý gerekir. Bu olmazsa yani artýk iþ yapamama durumunda olmalýyýz.
+Tasarýmsal bir hatada, tasarým deðiþtirilmeli.
+
+Java, C# gibi dillerde buna yönelik araçlar daha fazla kullanýlma eðiliminde. Yani oradaki yapýnýn monolitik hiyerarþi
+olmasý, garbage collector gibi bir sistemin olmasý, bütün fonksiyonlarýn virtual olmasý(hangi fonksiyonun çaðrýlacaðýnýn
+run time'da anlaþýlmasý) Run time'da bir nesnenin türünün sorgulanmasýna yönelik ciddi bir maliyet de getirmez. C++'da ise
+bunun bir de maliyeti var. Run time'da bir nesnenin türünün ne olduðu anlaþýlýyorsa ortada bir maliyet faktörü olduðu 
+kesin çünkü run time içinde bir kod çalýþacak türü anlayacak. 
+
+C# ve Java gibi dillerde olduðu gibi C++'da da bir nesnenin dinamik türünün yani run time'da belli olan türünün	ne olduðunu 
+run time'da check etmeye yarayan araçlar var. Aslýnda 3 tane basit araç olarak bahsedilebilir;
+Bunlardan biri bir operatör, dynamic_cast operatörü
+Ýkincisi yine bir opertaör, typeid
+Bir de typeid operatörü ile iliþkili standart bir sýnýf var, bu sýnýfýn ismi de typeinfo.
+
+
+
+dynamic_cast opeatörü:
+
+Sentaks olarak kursun baþýnda gördüðümüz C'de olmayan C++'da olmayan tür dönüþtürme operatörlerinden biri.
+Tüm tür dönüþtürme operatörlerinin genel sentaksý ayný:
+dynamic_cast<Target Type>(operand),
+Örnek olarak: dynamic_cast<Audi *>(carptr) //Audi * türüne dönüþüm yapýlmýþ, dönüþtürülen ise carptr
+upcasting: her mercedes bir arabadýr, her spor mercedes bir mercedestir. Dolayýsýyla zaten her Mercedes bir araba olduðu için
+araba gereken her yerde mercedes kullanýlabilir. Mercedes'ten arabaya, spor Mercedes'ten Mercedes'e veya spor Mercedes'den Arabaya
+yapýlan dönüþümler yukarý doðru dönüþümler. 
+Ancak dynamic_cast söz konusu olduðunda bizi ilgilendiren bunun tam tersi, down casting.
+
+
+
+10_02_2018_CUMARTESÝ
+
+RTTI, run time type information(identication)'ýn kýsaltmasý, çalýþma zamanýnda tür belirlenmesi.
+Polimorfizm söz konusu olduðunda, polimorfik bir tür söz konusu olduðunda statik tür kavramýnýn yaný sýra dinamik tür kavramý
+var. Normal olarak marifet türün ne olduðunu bilmeden bu iþi yapmak böylece eski kodlar yeni kodlarý kullanýr. Ancak bazý 
+durumlarda nesnenin türünün run time'da ne olduðunu öðrenmek, yapamadýðýmýz bazý iþleri yapmamýzý saðlar. Bu senaryolarýn çok
+büyük bir kýsmý kaynak kodun bizde olmamasý ile ilgili. 
+Nesne yönelimli programlama dillerinin sadece C++'da deðil diðer dillerde de buna yönelik araçlarý var.
+C#, Java gibi dillerde tüm sýnýf nesneleri zaten polimorfik, oradaki gibi programýn lojik yapýsýný saðlamak için C++'da bu araç
+kullanýlmaz. Mecbur olunduðu zaman kullanýlmasý gereken bir araç. 
+Araç setinde iki tane operatör var, dynamic_cast ve typeid. Bir de typeid operatörü ile birlikte kullanýlacak typeinfo isimli 
+sýnýf. 
+
+dynamic_cast operatörü programýn çalýþma zamanýnda bir downcasting'in güvenli olarak yapýlýp yapýlamayacaðýnýn kontrolünü yapar.
+Doðal olan is a ilikþisini gösteren, türemiþ sýnýftan taban sýnýfa doðru dönüþümlere geleneksel olarak upcasting denir. downcasting
+ise bunun tam tersi. Örneðin Bmw *'ýn Car *'a dönüþtürülmesi upcasting, ama Car *'ýn Bmw *'a dönüþtürülmesi downcasting.
+
+Þöyle bir fonksiyon var:
+void carGame(Car *ptr)
+{
+	auto bmwptr = (Bmw *)ptr; //C tarzý
+	bmwptr->openSunroof();
+}
+Fonksiyonun parametresi  Car *. Buraya gelen Bmw ise, Bmw'nin openSunroof fonksiyonu çaðrýlsýn ancak Bmw deðilse sunroof açma 
+giriþiminde bulunmak compile time engeli aþýlsa bile run time hatasý olur. 
+Runtime'da fonksiyona gelen nesne gerçekten Bmw nesnesi ise hiç problem çýkmayacak. Ama gelen Bmw nesnesi deðilse openSunroof
+aldýðý this adresini Bmw adresi olarak kullanacak, veri öðelerine eriþecek, pointerlarýna eriþecek, run time'da anýnda patlar.
+Run time'da bu iþler ancak gelenin Bmw olduðundan emin olunduðunda yapýlacak, iþte dynamic_cast operatörü bunun sýnamasýný verir.
+Bu gerçekten Bmw mi ? *ptr gerçekten Bmw'mi ? compile time'da deðil run time'da bunun kontrolü imkanýný verir.
+*ptr gerçekten Bmw ise, böyle bir tür dönüþümü yapmak ve Bmw nesnesi gibi kullanmak bir run time hatasýna sebep olmaz.
+
+static_cast<>
+const_cast<>
+reinterpret_cast<>
+dynamic_cast<T>(operand)
+C++'da tüm tür dönüþtürme operatörlerinin sentaksý ayný.
+
+Bmw *p = dynamic_cast<Bmw *>(carptr): Bmw *'a cast ediliyor ve operand carptr.
+run time'da eðer carptr'nin gösterdiði nesne gerçekten bir Bmw nesnesi ise bu dönüþüm baþarýlý olur ve de Bmw nesnesinin adresi,
+this adresi olarak kullanýlacak adres elde edilir. Dolayýsý ile bu bir Bmw pointerýna atanýrsa ve bu dönüþüm baþarýlý ise p
+bir Bmw nesnesinin adresi olur. Dönüþüm baþarýsýz olursa, yani *carptr bir Bmw deðilse o zaman operatör null pointer deðerini 
+üretir. Dolayýsýyla downcasting yapýlýp yapýlmayacaðý, güvenli mi güvensiz mi, p'ye verilen deðere bakýp anlaþýlýr. Eðer p'ye
+verilen deðer null pointer deðil ise, p artýk bir Bmw olarak kullanýlýr.
+
+
+Bu operatörün kullanýmýna iliþkin þöyle bir kural var; operand olan ifade polimorfik bir türden olmak zorunda.
+Bir türün polimorfik olmasý için en az bir tane sanal veya saf sanal fonksiyoný olmasý gerekir.
+Base sýnýfýnýn böyle bir tane bile fonksiyonu yok. 
+//////////////////////////////////////////////////////////////////
+class Base {
+public:
+	void f1() {};
+	void f2() {};
+};
+
+class Der1 : public Base {
+public:
+	void f3() {};
+};
+
+class Der2 : public Base {
+public:
+	void f4() {};
+};
+
+void func(Base *baseptr)
+{
+	Der1 *dp = dynamic_cast<Der1 *>(baseptr); //sentaks hatasý
+}
+//////////////////////////////////////////////////////////////////
+
+
+Sýnýfa sanal bir destructor eklenerek bu problem basitçe çözüldü.
+Der1 ve Der2 sýnýflarý, Base'den türetilmiþ sýnýflar. func fonksiyonunun parametresi Base * türden.
+Fonksiyonun içinde dynamic_cast kullanýlarak parametre olarak gelen sýnýfýn Der1 olup olmadýðý kontrolü yapýlýr.
+Eðer gelen Der1 ise, Der1 sýnýfýnýn f3 üye fonksiyonu çaðrýlýr. Çalýþma zamanýnda anlaþýlmasý için randomize idiyomu
+kullanýlýr.
+//////////////////////////////////////////////////////////////////
+class Base {
+public:
+	void f1() {};
+	void f2() {};
+	virtual ~Base(){}
+};
+
+class Der1 : public Base {
+public:
+	void f3()
+	{
+		cout << "Der::f3()" << endl;
+	}
+};
+
+class Der2 : public Base {
+public:
+	void f4() {};
+};
+
+void func(Base *baseptr)
+{
+	Der1 *dp = dynamic_cast<Der1 *>(baseptr);
+
+	if (dp) {
+		cout << "buraya gelen bir Der1 nesnesi" << endl;
+		dp->f3();
+	}
+	else {
+		cout << "buraya gelen bir Der1 nesnesi degil" << endl;
+	}
+}
+
+int main(void) {
+
+	randomize();
+
+	for (;;) {
+		if (rand() % 2) {
+			cout << "Der1 case\n";
+			func(new Der1);
+		}
+		else {
+			cout << "Der2 case\n";
+			func(new Der2);
+		}
+		getchar();
+	}
+}
+//////////////////////////////////////////////////////////////////
+
+
+Buradaki problem scope leakage, f3 fonksiyonunu çaðýrmak dýþýnda baþka yapýlacak bir iþ yok.
+Hem yanlýþlýkla bu isim kullanýlabilir hem isim çakýþmasýna sebep olabilir.
+//////////////////////////////////////////////////////////////////
+void func(Base *baseptr)
+{
+	Der1 *der1ptr = dynamic_cast<Der1 *>(baseptr);
+	if (der1ptr != nullptr)
+		der1ptr->f3();
+}
+//////////////////////////////////////////////////////////////////
+der1ptr eðer bu iþlemi yapmak dýþýnda hiçbir yerde kullanýlmayacaksa, fonksiyonun devam ettiði düþünülürse
+if bloðu dýþýnda yanlýþlýkla bir yerde de kullanýlabilir. Bu durumda mümkünse der1ptr'yi bu iþlem dýþýnda 
+kullanmak mümkün olmamalý. Bunu yapmanýn bir iyi olmayan yolu bunu blok içine almak.
+
+if deyimine iliþkin bir özellik, for'un birinci kýsmýnda deðiþken tanýmlanabiliyor, if'in de içinde deðiþken 
+tanýmlanabiliyor. Bu C++11 ile gelen yeni bir özellik deðil. Ancak bir sýnýrlama var sadece zero non-zero veya
+lojik control yapýlabiliyor.
+//////////////////////////////////////////////////////////////////
+void func(Base *baseptr)
+{
+	if (Der1 *der1ptr = dynamic_cast<Der1 *>(baseptr))
+		der1ptr->f3();
+
+	der1ptr->f3(); //geçersiz, der1ptr'nin scope'u dýþýnda
+}
+//////////////////////////////////////////////////////////////////
+if parantezi içinde bildirilen der1ptr týpký for'un birinci kýsmýnda tanýmlanan isimlerde olduðu gibi scope'u
+kontrol deyiminin gövdesi ile sýnýrlý. Bunun da sýnýrlayýcý özelliði sadece zero, nonzero veya nullptr olup olmadýðý
+sorgulanabilir.
+
+2017 standartlarý ile if deyimine yeni bir sentaks eklendi, if with initializer. Böylece artýk scope leakage problemi tamamen
+engellenir. Yukarýdaki faydalý ancak sadece logic kontrol yani boolean kontrol ile sýnýrlý. 
+//////////////////////////////////////////////////////////////////
+int func(int);
+int main(void) {
+
+	if (int retval = rand(); retval % 5 == 0)
+		func(retval);
+
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+Eðer referans üstünden dynamic_cast yapýlýrsa, null referans diye bir kavram olmadýðýndan bu durumda dönüþümün baþarýsýz 
+olmasý halinde kontrol kriteri yok. Bu durumda bir exception gönderir. dyanmic_cast operatörü referans bazlý kullanýlýrsa ve
+run time'da nesnenin dinamik türü o hedef tür deðilse bir exception gönderir. Gönderilen exception'ýn türü bad_cast.
+Öncelikle func fonksiyonu referans semantiði kullanacak þekilde düzenlendi.
+Ardýndan main'de fonksiyona der2 sýnýfý türünden nesne gönderildi ve try bloðu içine alýndý. catch bloðunda ise kendi türü
+bad_cast ile hata yakalandý.
+bad_cast sýnýfý da exception sýnýfýndan türetildiðinden exception & ile de hata yakalanabilirdi.
+//////////////////////////////////////////////////////////////////
+class Base {
+public:
+	void f1() {};
+	void f2() {};
+	virtual ~Base() {}
+};
+
+class Der1 : public Base {
+public:
+	void f3()
+	{
+		cout << "Der::f3()" << endl;
+	}
+};
+
+class Der2 : public Base {
+public:
+	void f4() {};
+};
+
+void func(Base &r)
+{
+	Der1 &dref = dynamic_cast<Der1 &>(r);
+	dref.f3();
+
+}
+
+int main(void) {
+	try{
+		Der2 d2;
+		func(d2);
+	}
+	catch (bad_cast &r) {
+		cout << "hata yakalandi " << r.what() << endl;
+	}
+
+}
+//////////////////////////////////////////////////////////////////
+dynamic_cast pointer üstünden yapýldýðýnda, downcasting baþarýlý olmayacaksa(nesnenin türü beklenen tür deðilse) ifadenin deðeri
+nullptr olur. Ancak referans üstünden yapýldýðýnda null referans diye bir araç olmadýðýndan, downcastingin baþarýsýz olmasý
+durumunda bad_cast sýnýfý türünden bir exception throw eder. bad_cast sýnýfý da exception sýnýfýndan türetilmiþ bir sýnýf.
+
+
+Der11 sýnýfý da Der1 sýnýfýndan türetme yolu ile elde edilmiþtir. Burada yine is a iliþkisi var.
+Der11 de Der1 olduðundan Der11 de Der1 gibi muamele görür.
+//////////////////////////////////////////////////////////////////
+class Base {
+public:
+	void f1() {};
+	void f2() {};
+	virtual ~Base() {}
+};
+
+class Der1 : public Base {
+public:
+	void f3()
+	{
+		cout << "Der::f3()" << endl;
+	}
+};
+
+class Der11 : public Der1 {
+public:
+
+};
+
+void func(Base *ptr)
+{
+	if (auto p = dynamic_cast<Der1 *>(ptr)) {
+		cout << "evet Der1" << endl;
+	}
+	else {
+		cout << "hayir Der1 degil" << endl;
+	}
+}
+
+int main(void) {
+
+	Der1 d1;
+	func(&d1); //geçerli, "evet Der1"
+
+	Der11 d11;
+	func(&d11); //geçerli "evet Der1"
+
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+Typeid Operatörü:
+
+typeid(expression);
+typeid keyword, sizeof keyword ikisine de bir expression argüman olarak verilir.
+Bir typeid ifadesi yazýldýðýnda, bu ifade derleyicinin oluþturduðu kodla bir sýnýf türünden nesneye referans oluþturur.
+Bu bir fonksiyon deðil ancak sanki adeta bir fonksiyon çaðrýlýyor, fonksiyondan da bir sýnýf türünden referans elde edilir.
+Ancak fonksiyon olmadýðý unutulmamalý, derleyici operatör seviyesinde kod üretir.
+Bu sýnýfýn ismi typeinfo. typeid operatörü kullanýldýðý zaman, typeid operatörü ile oluþturulan ifade ismi typeinfo olan
+standart bir C++ sýnýfý türünden bir nesneye referans. Nesneye referans olmasý ile o nesne kullanýlmýþ olur.
+Yani typeid(expression) ifadesinin yanýna nokta konulursa; typeid(expression). aslýnda typeinfo sýnýfýnýn interface'i
+kullanýlmýþ olur. Bu referans const bir referans. typeid operatörüne operand olarak bir ifade verildiðinde derleyicinin
+oluþturduðu kodla typeinfo isimli bir sýnýf türünden derleyicinin oluþturduðu bir nesneye referans alýnmýþ olunur.
+
+Derleyicinin ürettiði kodda sanki ismi typeinfo türünden olan bir nesne oluþturulur. typeid(exp) kullanýldýðýnda derleyici
+bunu þöyle bir ifadeye dönüþtürür: const typeinfo &r = x; 
+typeid(exp) dedik ancak geri planda derleyicinin oluþturduðu bir nesne kullanýlýr. 
+const referans olduðundan sýnýfýn interface'inden yalnýzca const üye fonksiyonlar kullanýlabilir.
+Daha önceden örneklerde de kullandýðýmýz; typeid(exp).name(); name aslýnda typeinfo sýnýfýnýn bir üye fonksiyonu.
+typeinfo sýnýfýnýn 3 tane bizi ilgilendiren fonksiyonu var; operator==, operator!= ve name fonksiyonlarý.
+name fonksiyonunun geri dönüþ deðeri const char *, dolayýsý ile typeid(exp).name() ifadesi kullanýldýðýnda buradan yazýnýn
+adresi alýnýr.
+
+//////////////////////////////////////////////////////////////////
+int main(void) {
+
+	int x = 10;
+
+	cout << typeid(x).name() << endl;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+typeinfo sýnýfý türünden bir nesne oluþturulmasýnýn hiçbir yolu yok.
+Baþlýk dosyasý eklenmesine raðmen geçersiz olur.
+//////////////////////////////////////////////////////////////////
+int main(void) {
+	type_info x; //geçersiz
+}
+//////////////////////////////////////////////////////////////////
+"no default constructor available", sýnýfýn default constructor'ý yok.
+
+
+
+copy constructor ile de nesne oluþturulamaz.
+//////////////////////////////////////////////////////////////////
+int main(void) {
+	type_info x{typeid(10)}; //geçersiz
+}
+//////////////////////////////////////////////////////////////////
+sýnýfýn copy constructor'ý delete edilmiþtir.
+eski c++ kodlarýnda delete etmek mümkün olmadýðýndan bu fonksiyon private'dý.
+
+
+Derleyicinin yazmýþ olduðu sýnýf aþaðýdaki gibi düþünülebilir;
+class typeinfo{
+public:
+	type_info(const type_info &) = delete;;
+}
+Bir type info nesnesine ulaþmanýn tek yolu, typeid operatörünü kullanmak.
+
+
+Eðer sýnýfýn operator==, operator!= fonksiyonlarý çaðrýlýrsa, iki typeinfo nesnesinin ayný nesne olup olmadýðý test
+edilebilir. Ayný türe iliþkin typeinfo nesnesi bir tane. typeid bir ifade için kullanýlýp, baþka bir ifade için yine
+typeid operatörü kullanýlýrsa iki tane typeinfo nesnesi elde edilmiþ olur, bu iki nesne == ile karþýlaþtýrýldýðýnda
+bu ikisi ayný türden ise fonksiyon true deðer verir, farklý türlerden ise false deðer verir.
+
+//////////////////////////////////////////////////////////////////
+int main(void)
+{
+	int x = 10, y = 34;
+	double dval;
+
+	if (typeid(x) == typeid(y))
+		cout << "evet esit" << endl;
+	else
+		cout << "hayir esit degil" << endl;
+
+	if (typeid(x) != typeid(dval))
+		cout << "esit degiller" << endl;
+	else
+		cout << "esitler" << endl;
+}
+//////////////////////////////////////////////////////////////////
+
+typeid operatörünü, sizeof operatörüne biraz daha benzer kýlan bir özelliði daha var.
+sizeof operatörünün operandý olan ifade bir tür bilgisi olabilir, sizeof(int) gibi, ayný özellik burada da geçerli.
+Yani typeid(x) == typeid(int) gibi bir kontrol de yapýlabilir. x'in türü in mi ? sorgusu yapýlýr.
+if(typeid('a') == typeid(int)), false deðer üretir çünkü C++'da 'a' ifadesinin türü C'de olduðu gibi int deðil char.
+typeid operatörüne geçilen tür bilgisi user defined bir tür de olabilir. 
+
+typeid operatörü içindeki ifade de, sizeof'daki gibi deðerlendirmeye alýnmaz.
+dynamic_cast'den birinci önemli farký, dyanmic_cast'in operandý olan ifadenin polimorfik türlerden olmasý gerekir.
+typeid'nin ise polimorfizm ile ilgisi olmak zorunda deðil. ifade olarak int türden bir sabit de geçilebilir.
+typeid(expression).name() sonucunda elde edilen yazý derleyiciye baðlý.
+
+
+typeid operatörü run time operatörü mü ? hem evet hem hayýr.
+operatörün davranýþý, operand olan ifadenin polimorfik türden olup olmadýðýna göre deðiþir.
+Aþaðýdaki örnekte *ptr ifadesinin türünün class Base olduðu görülür.
+//////////////////////////////////////////////////////////////////
+class Base {
+public:
+	void f1() {};
+	void f2() {};
+};
+
+class Der1 : public Base {
+public:
+	void f3()
+	{
+		cout << "Der::f3()" << endl;
+	}
+};
+
+class Der11 : public Der1 {
+public:
+};
+
+class Der2 : public Base {
+public:
+	void f4() {}
+};
+
+void func(Base *ptr)
+{
+	cout << typeid(*ptr).name() << endl;
+}
+
+int main(void)
+{
+	Der1 myder1;
+
+	func(&myder1);
+}
+//////////////////////////////////////////////////////////////////
+
+
+Ancak sýnýf, polimorfik bir sýnýf haline getirilip kod tekrar çalýþtýrýldýðýnda, *ptr ifaedesinin türünün
+class Base deðil, class Der1 olduðu görülür.
+//////////////////// //////////////////////////////////////////////
+class Base {
+public:
+	void f1() {};
+	void f2() {};
+	virtual ~Base() {}
+};
+
+class Der1 : public Base {
+public:
+	void f3()
+	{
+		cout << "Der::f3()" << endl;
+	}
+};
+
+class Der11 : public Der1 {
+public:
+};
+
+class Der2 : public Base {
+public:
+	void f4() {}
+};
+
+void func(Base *ptr)
+{
+	cout << typeid(*ptr).name() << endl;
+}
+
+int main(void)
+{
+	Der1 myder1;
+
+	func(&myder1);
+}
+//////////////////////////////////////////////////////////////////
+
+
+Söz konusu ifade polimorfik bür türdense, tür run time'da belirlenir. Polimorfik deðilse statik tür alýnýr.
+dynamic_cast'de zaten polimorfik bir türden operand kullanmak zorunlu.
+
+
+func fonksiyonunun kodu þu þekilde deðiþtirilse;
+//////////////////////////////////////////////////////////////////
+void func(Base *ptr)
+{
+	if (typeid(*ptr) == typeid(Base))
+		cout << "dogru" << endl;
+	else
+		cout << "yanlis" << endl;
+}
+//////////////////////////////////////////////////////////////////
+main'de yanlýþ yazýsý çýkar. Her Der bir Base'dir ancak typeid opeatörü kontrolü böyle yapmaz.
+Yani is a ? iliþkisi == için yeterli deðil. Oysa dynamic_cast söz konusu olsaydý bu eþit çýkardý.
+typeid operatöründe nesnenin kesin türünün eþitlik için doðru olmasý gerekir yani is a ? iliþkisi ile 
+elde edilen türün deðil. 
+Tabi, eðer Base sýnýfýnýn polimorfik olmasýný saðlayan destructor silinir ve sýnýf polimorfik olmaktan
+çýkarsa eþitlik doðru olar, çünkü statik olarak bakýldýðýnda türleri aynýdýr.
+
+Run time'da gerek dynamic_cast olsun gerek typeid olsun nasýl bir kod üretiliyor ? Nasýl oluyor da run time'da nesnenin türünün ne
+olduðu anlaþýlýp ekrana yazdýrýlýyor ?
+Her sýnýf için ve polimorfik olmasý durumunda hiyerarþideki her sýnýf için derleyici resmen run time'ýn baþýnda birer nesne yaratýr.
+Yani hiyerarþide 250 tane sýnýf olsa, 250 tane run time baþýnda sýnýflar türünden nesne yaratýlýr. Bu tür bilgilerini vs enkapsüle eden
+bu derleyicinin oluþturduðu sýnýf nesneleri.
+Yani *ptr'nin türü Mercedes mi diye bakýldýðýnda gerçekten typeid, *ptr ile bizi bir nesneye eriþtirir. Bu nesne run time baþýnda
+derleyicinin oluþturduðu nesne. O nesne ile ayný olup olmadýðýna bakar.
+Bu iþ maliyetli bir iþ. typeid operatörü kullanýldýðý zaman veya dynamic_cast kullanýldýðý zaman bu nesnelerin hayata gelme,
+construction maliyeti kodun bir maliyeti. Eðer sorgulama yapýlýrsa derleyici hiyerarþiyi hiyerarþiyi yukarýdan aþaðýya doðru dolaþýp
+tek tek bakar, nesnelerin türü ayný mý deðil mi diye. Hiyerarþi içinde 250 tane sýnýf varsa, 250 tane typeinfo nesnesi var hepsi 4 byte
+olsa 1000 byte. Run time'da bunun için bir kod çalýþýyor.
+RTTI default olarak ayarlardan tamamen kapatýlabilir. Derleyici, programcýnýn bunu kullanýp kullanmayacaðýný göremediði için mecbur 
+polimorfik sýnýflar söz konusu olduðunda bu typeinfo nesnelerini hayata getirecek kodu üretir. Bu sebeple C++ derleyicilerinin çoðunda IDE
+ayarlarýnda RTTI kapatýlýp, açýlabilir.
+
+func foknksiyonuna nullptr gönderildi ve kod çalýþtýrýldýðýna abort çaðrýlýr, exception throw edilir.
+exception'ýn türü bad_typeid, yine exception ile yakalanabilir.
+operatör atýlan 3 tane exception öðrenildi; biri new operatörü, operator new'i çaðýrýp bellek bloðu elde edemediði zaman bad_alloc gönderir.
+Diðeri dynamic_cast referans yoluyla baþarýsýz dönüþüm giriþiminde bad_cast throw eder.
+Bu da null pointer'ý dinamik tür içinde gönderdiðimizde bad_typeid exception'ý throw eder.
+//////////////////////////////////////////////////////////////////
+void func(Base *ptr)
+{
+	cout << typeid(*ptr).name() << endl;
+}
+
+int main(void)
+{
+	Der1 myder1;
+
+	try {
+		func(nullptr);
+	}
+	catch (exception &r) { //catch (bad_typeid &r) gerçek tür
+
+		cout << "hata yakalandi: " << r.what() << endl;
+	}
+}
+//////////////////////////////////////////////////////////////////
+
+
+Derleyici nasýl bir kod üretir ? Polimorfik sýnýflar için derleyici sanal fonksiyon tablosu oluþturur. Sanal fonksiyon tablosunda normalde ayný 
+override'larýn adresi bulunur. Derleyici o typeinfo sýnýfý türünden nesne oluþturacak kodu üretirken o nesnenin adresini de gider sanal fonksiyon
+tablosunda 0 indekse yazar. Biz virtual pointer yolu ile o sanal fonksiyon tablosuna eriþiyorduk, oraya eriþtikten sonra indeks yolu ile o 
+typeinfo nesnesine de eriþebiliriz. 
+typeid'nin maliyeti ile dynamic_cast'in maliyeti arasýnda büyük bir sýnýf hiyerarþisi söz konusu olduðunda hangisinin maliyeti daha yüksektir ?
+ikisi de ayný nesneleri kullanýr, dynamic_cast de o türden olup olmadýðýný anlarken sanal fonksiyon tablosuna eriþip o indekse bakar, o indeksten
+nesnenin türünün ne olduðunu anlar böylece o ayný türse null pointer üretmez. Ýmplementasyon tarafýnda ikisi de ayný nesneyi kullanýrlar.
+dynamic_cast'in maliyeti daha yüksek. typeid'de ayný olup olmadýklarý bir sorgulamada sýnanýr. Ayný türden olduklarýnda ayný typeid nesneleri.
+Ancak dynamic_cast hiyerarþide sonuna kadar gitmek zorunda, hiyerarþi çok derinse dynamic_cast daha fazla sorgulama yapar.
+
+
+static_cast operatörü de dynamic_cast gibi kullanýlabilir, legal ancak ayný þey deðil.
+sentaks hatasý yok ama buradaki kontrolün run time kontrolü ile hiçbir alakasý yok.
+Burada derleyici sadece bu iki sýnýfýn ayný hiyerarþide olup olmadýðý kontrolünü yapar.
+Buraya gelen nesnenin Der1 nesnesi olup olmadýðý kontrolü yapýlmaz.
+fonksiyona Der2 nesnesi gönderildi ancak onu Der1 nesnesiymiþ gibi kullandý.
+dynamic_cast kullanýlsaydý, gelen nesnenin Der1 olup olmadýðý run time'da kontrol edilirdi.
+Ortada bir compile time hatasý yok ama bu bir run time hatasý.
+//////////////////////////////////////////////////////////////////
+class Base {
+public:
+	void f1() {};
+	void f2() {};
+	virtual ~Base() {}
+};
+
+class Der1 : public Base {
+public:
+	void f3()
+	{
+		cout << "Der::f3()" << endl;
+	}
+};
+
+class Der11 : public Der1 {
+public:
+};
+
+class Der2 : public Base {
+public:
+	void f4() {}
+};
+
+void func(Base *ptr)
+{
+	Der1 *p = static_cast<Der1 *>(ptr);
+	p->f3();
+}
+
+int main(void)
+{
+	Der2 myder2;
+
+	func(&myder2);
+
+}
+
+//////////////////////////////////////////////////////////////////
+
+
+
+Yukarýdakinin ayrý bir faydasý var. Diyelim ki elimizde çok derin bir sýnýf hiyerarþisi var, iki sýnýfýn ayný hiyerarþide olup olmadýðý test edilmek
+isteniyor. Üçüncü bir sýnýf olarak Onder sýnýfý oluþturuluyor. Onder sýnýfýnýn Base hiyerarþisi ile hiçbir alakasý yok.
+Onder *'dan Der *'a statik cast ile dönüþüm yapýlýrsa compile time hatasý olur.
+//////////////////////////////////////////////////////////////////
+class Onder {
+
+};
+
+class Neco{
+
+};
+
+int main(void)
+{
+	Onder x;
+	Neco *p = static_cast<Neco *>(&x);
+
+
+}
+//////////////////////////////////////////////////////////////////
+Ýki sýnýfýn ayný hiyerarþide olup olmadýðý böyle anlaþýlýr. static_cast ile kullanýmý legalse ayný hiyerarþidedir.
+
+
+Burada ise legal.
+static_cast'de dönüþümün legal olmasý, run time'da o nesnenin o türden olduðunu iþaret etmez.
+static_cast'in run time ile alakasý yok.
+Ancak static_cast'de adres üstünden iki farklý sýnýf için dönüþüm yapýlýrsa ve legalse bu iki sýnýf ayný hiyerarþi içindedir.
+//////////////////////////////////////////////////////////////////
+class Onder {
+
+};
+
+class Neco : Onder{
+
+};
+
+int main(void)
+{
+	Onder x;
+	Neco *p = static_cast<Neco *>(&x);
+
+
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+templatelere iliþkin birçok kodda typeid operatörü mekanýzmayý anlamak için kullanýlýr.
+//////////////////////////////////////////////////////////////////
+template<typename t>
+void func(T x)
+{
+	cout << typeid(x).name() << endl;
+}
+//////////////////////////////////////////////////////////////////
+Derleyici T türünün ne olduðunu anladýðýnda, T yerine compile time'da o gerçek türü kullanýr.
+Derleyicinin yazdýðý kodda da typeid operatörü kullanýlýr, derleyicinin T türünü hangi tür olarak aldýðý bu þekilde görülür.
