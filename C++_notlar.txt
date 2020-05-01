@@ -18675,3 +18675,1138 @@ void func(T x)
 //////////////////////////////////////////////////////////////////
 Derleyici T türünün ne olduðunu anladýðýnda, T yerine compile time'da o gerçek türü kullanýr.
 Derleyicinin yazdýðý kodda da typeid operatörü kullanýlýr, derleyicinin T türünü hangi tür olarak aldýðý bu þekilde görülür.
+Yani burada ihtiyaçtan ziyade eðitimin bir aracý olarak kullaným durumu var.
+
+
+
+11_02_2018_PAZAR
+
+NAMESPACES(ÝSÝM ALANLARI)
+
+Programlarda biz isimler kullanýyoruz ve bu isimlerin önemli bir kýsmý dýþ baðlantýya açýk. Fakat programlamadaki temel
+problemlerden biri dýþ baðlantýya ait isimlerin sayýsý tek olmalý. Örnek olarak dýþ baðlantýda ayný isimde iki fonksiyon
+olamaz, link aþamasýnda problem çýkar. C gibi bir dilde bile bu önemli bir problem, C programlarýnýn görece küçük olmasý
+tesellimiz. Bir kütüphane baþlýk dosyasý include edildiðinde, dýþarýya açýlmýlþ bütün isimleri kendi global alanýmýza
+almýþ oluyoruz bu da isim çakýþmasý için ciddi bir risk. Ýsimler özelleþtirilerek çakýþma riski azaltýlabilir, örnek 
+olarak kütüphanelerde, kütüphanenin ismi isimlere ön ek olarak koyulabilir. 
+C++, C#, Java gibi oop dillerinde kütüphane sayýlarý tipik bir projede çok daha fazla. Ýsim çakýþma olasýlýðý çok daha
+yüksek. Bu yüzden böyle diller, global isim alanýna enjekte edilen isimlerin birbirinden gizlenmesine yönelik daha 
+sofistike C'de olmayan araçlar barýndýrýr. Araçlarýn özü isimleri birbirinden gizlemek. 
+
+Örnek olarak C dizini altýnda ayný isimde iki .txt dosyasý bulunamaz. Eðer böyle bir durum varsa, dosyalardan birini C
+altýnda bir klasör oluþturur onun içine koyabiliriz. Bu durumda biri C'de biri C'nin içindeki bir klasörde olan ayný isimde
+iki .txt dosyasý olabilir. Ayný þekilde bir kütüphane kullanýlacaksa isimler doðrudan global alana boþaltýlmak yerine sanki
+hepsi birer klasör altýndaymýþ gibi gelirler. Adeta bir container içindelermiþ gibi isimler aktarýlýr. Ýsimler ayný olsa bile
+ayrý containerlarda tutulduðundan birbirleri ile karýþmaz.
+
+Ýsim alanlarý, global isim alanýndaki isimleri birbirinden gizlemek ve isim çakýþmasýný engellemek için dil tarafýndan 
+desteklenen mekanizma. Bir namespace adeta bir isim container'i. 
+C++'da özellikle büyük ve genel hizmet veren kütüphaneler isimlerini tipik olarak bir namespace içinde verir. 
+Programcý olarak namespaceler daha çok hizmet alýnan kodlardadýr, daha çok kullanýcý olarak karþýlaþýlýr. Programcýnýn kullandýðý
+baþka kütüphaneler namespace içinde isimler verir.
+
+C++'nýn standart kütüphanesi, std namespace'i içinde. Sadece C++'ýn standart kütüphanesinden 2000 küsür isim gelir.
+Kütüphanenin dýþa tanýttýðý bütün isimler, std isim alaný içinde.
+
+
+namespace bir anahtar sözcük, birden fazla yerde kullanýlacak bir keyword.
+Kapayan küme parantezinin sonunda sýnýflarda olduðu gibi ; koyulmaz, ancak koyulmasý da sentaks hatasý deðil.
+Ýsim alanýnýn içinde global alanda yapýlan her þey yapýlabilir. Bir deðiþken tanýmlanabilir, bildirilebilir. Bir fonksiyon da 
+tanýmlanýp, bildirilebilir. Bildirim de olabilir, taným da.
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+
+} 
+//////////////////////////////////////////////////////////////////
+
+
+Örnek olarak bir baþlýk dosyasý include edilir, baþlýk dosyasýnýn bütün içeriði bu isim alanýnýn içinde olur.
+cppcurl.h include edildiðinde, kendi global alanýmýza bu isim alanýný yapýþtýrmýþ oluruz. Yani yukarýdaki örnekteki namespace Neco
+include edilen baþlýk dosyalarýndan gelir. Bu baþlýk dosyasý bir isim alaný içinde bildirimlere sahip olur. 
+Ýçinde normal bir sýnýf bildirimi, fonksiyonlar, typedef bildirimleri bu isim alanýndan gelir.
+//////////////////////////////////////////////////////////////////
+#include "cppcurl.h"
+namespace Curlx {
+	class Xyz{
+	};
+	
+} 
+//////////////////////////////////////////////////////////////////
+
+
+Dilin kurallarýna göre namespace bir kod alaný, yani global alan da aslýnda bir namespace ancak bahsedilirken global namespace denir.
+Neco'nun içinden bahsedilirken ise Neco namespace'i denir. Dilin kurallarýna göre normal global alanda ne yapýlabiliyorsa bu isim
+alanlarý içinde de yapýlabilir. Bir namespace içinde de namespace oluþturulabilir, nested olabilirler.
+C++'nýn standart kütüphanesinde de nested isim alanlarý var. 
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	namespace Project{
+	}
+} 
+//////////////////////////////////////////////////////////////////
+
+
+Namespace bir scope, dilin kurallarý ayný scope içinde ayný ismin birden fazla varlýða verilmesini engelliyorsa bu namespace için de 
+geçerli. Ýsim alanlarý içindeki isimler birbirinden farklý olmak zorunda.
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x = 10;
+	double x = 2.3;
+}  //geçersiz
+//////////////////////////////////////////////////////////////////
+
+
+Namespace scope'un ilginç bir özelliði var. 
+Derleyici bir namespace tanýmýnýn üstünden geçtikten sonra, ayný isimde bir namespace görürse bunlarý kimülatif birleþtirir.
+Tek bir namespace olmasýna raðmen, fiziksel olarak birden fazla yerde bulunabilir. Bunlar ayrý namespace'ler deðil. 
+Eðer böyle olmasaydý bir kütüphane tek bir baþlýk dosyasý ile sunulmak zorundaydý. Kütüphanedeki bütün isimler bir namespace'e
+konulmak isteniyor ancak onlar da ayrý ayrý baþlýk dosyalarýnda. 10 tane baþlýk dosyasý, 10'u da ayný isim alaný içinde. Birden fazla
+baþlýk dosyasý include edildiðinde burada olduðu gibi, bunlara tek bir isim alaný muamelesi yapar.
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x = 210;
+}
+
+namespace Neco {
+	double d = 34;
+	class Myclass {
+
+	};
+	double x = 3.4; //geçersiz, ayný isim alanýnda ayný isim birden fazla bulunamaz
+}
+//////////////////////////////////////////////////////////////////
+
+
+vector baþlýk dosyasý dahil edildiðinde, namespace std {} include edilmiþ olur, bütün baþýk dosyasýndaki isimler bunun içinde.
+map include edildiðinde de yine, isimler namespace std {} içinde. Farklý ve birçok sayýda baþlýk dosyasý var ama dýþarý verilen isimlerin
+hepsi ayný isim alaný içinde.
+
+
+namespace bir scope, class da bir scope ama class ve namespace arasýnda ciddi fark var. Ýkisinde de isimler tanýtýlýyor ama sýnýflara 
+access kontrol konulabiliyorken isim alanlarýna konulmaz. Ýsim alanlarý eriþim kontrolüne tabi deðil.
+
+
+Bir ismi bir namespace içinde aratmak için özel bir operatör kullanýlýr. Bu operatör yine çözünürlük operatörü. Sol operand olarak isim
+alanýnýn ismi, sað operand olarak isim alaný içindeki ismi alýr.
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x;
+} 
+int main(){
+	Neco::x;
+}
+//////////////////////////////////////////////////////////////////
+Derleyici artýk bu ismi doðrudan Neco isim alanýnda arar. Artýk önce blok içinde arayýp global alanda arayýp bakmaz. Sadece isim alanýna
+bakar. Neco ismi de aranýyor yani namespace Neco silinse, Neco ismi bulunamadýðý için sentaks hatasý olur. Ýki aþamalý bir sentaks kontrolü
+mevcut, biri namespace ismi, diðeri namespace içindeki bu isim. 
+
+
+Bazý durumlarda sürekli kullanýlacak isimleri çözünürlük operatörü ile isim alanýnýn ismi ile niteleyerek kullanmak kullaným zorluðu
+olabiliyor, okuyanýn iþini de zorlaþtýrabiliyor. Bazý durumlarda namespace içindeki isimler nitelemenden kullanýlmak istenebilir. Ancak
+Neco::x gibi bir kullaným asla yanlýþ veya kötü deðil, birincil yöntem bu. Ancak kimi zaman yazým kolaylýðý saðlamak, kodun görüntüsünü 
+basitleþtirmek için namespace ismi ile hiç niteleme yapýlmak istenmez. Buna yönelik araçlar asla baþlýk dosyasý içinde kullanýlmaz.
+Baþlýk dosyasýnda mesela bir sýnýf tanýmlanacak, sýnýfýn öðelerinden biri bir namespace içinde tanýtýlan türlerden ise veya baþlýk dosyasýna
+bir inline fonksiyon tanýmý yapýlýyor orada kullanýlacak bir isim bir namespace içindeyse her zaman o isim nitelenerek kullanýlýr. 
+Ýsmi nitelemeden kullanmaya olanak veren araçlar baþlýk dosyasý için deðil. Baþlýk dosyasýný birçok farklý dosya include edecek, baþlýk
+dosyasýna ne konulursa dahil eden kodlara o yapýþtýrýlýr. Baþlýk dosyasýna oradaki ismin namespace ismi ile nitelenmeden kullanýlmasýna 
+olanak veren bir bildirim konulursa o bildirimi baþlýk dosyasýný include eden tüm baþlýk dosyalar almýþ olur. Bu zaten isim alanýnýn bütün
+avantajýný götürür, zaten amaç isim çakýþmasýný engellemekti. Böyle yaparak isim doðrudan kullanýlýr hale gelir.  
+
+//////////////////////////////////////////////////////////////////
+#include <string.h>
+class Myclass {
+	std::string s;	//string s; doðru deðil
+};
+//////////////////////////////////////////////////////////////////
+Myclass içindeki s, string türünden, C++'nýn standart sýnýfýnýn ismi, string.h baþlýk dosyasýnda ve bir namespace içinde.
+std namespace'i içinde o zaman std ile nitelenmeli. Burada asla using bildirimi de kullanýlmamalý. Mesela bunun Neco.h içinde oluðu düþünülsün,
+eðer kullanýlýrsa Neco.h'yý dahil eden herkes o using bildirimini de kullanmýþ olur.
+
+
+Bir namespace içindeki ismi nitelemeden kullanmaya yönelik üç farklý ayrý araç var. 
+Bu araçlardan biri using declaration, diðeri using namespace declaration, diðeri ise ADL(arguement dependant lookup) veya diðer ismi Koenig lookup.
+
+
+using declaration:
+
+main içindeki gibi bu isim kullanýldýðýnda, derleyici using bildirimini bulur. Böylece main'deki x isminin Neco namespace'ine iliþkin olduðunu
+anlar ve Neco isim alanýnda bu ismi bulur, o isim ile iliþkilendirir.
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x = 10;
+	class Myclass {
+
+	};
+}
+
+using Neco::x;
+
+int main(void)
+{
+	x;
+}
+//////////////////////////////////////////////////////////////////
+
+
+Ancak bazý önemli kurallar bilinmeli, birinci kural using bildiriminin de bir scope'u var. Yukarýdaki örnekte using bildirimi global alanda yapýldý.
+Þöyle bir kaynak dosya olduðu düþünülsün;
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x = 10;
+	class Myclass {
+
+	};
+}
+
+using Neco::x;
+
+void f1()
+{
+	x = 34;
+}
+
+void f2()
+{
+	x = 21;
+}
+//////////////////////////////////////////////////////////////////
+using bildirimi global alanda yapýldýðýndan, bildirim f1 içinde de f2 içinde de görülür. Dolayýsýyla iki fonksiyonun içinde de x ismi nitelemeden 
+kullanýlabilir.
+
+
+Eðer global alandaki using bildirimi f1 fonksiyonunun ana bloðu içinde yapýlsaydý, artýk bu using bildirimi sadece f1 içinde görünür olurdu. 
+f2 içinde bildirim görünür olmadýðýndan f2 içinde x'in kullanýmý sentaks hatasý olurdu.
+//////////////////////////////////////////////////////////////////
+void f1()
+{
+	using Neco::x;
+	x = 34;
+}
+
+void f2()
+{
+	x = 21;
+}
+//////////////////////////////////////////////////////////////////
+
+Nitelemeden ismi kullanma hakký global alandaki tüm kodlara verilmek istenirse using bildirimi global alanda yapýlýr. Eðer bu bir fonksiyonla 
+sýnýrlandýrýlmak istenirse, using bildirimi o fonksiyonun ana bloðu içinde yapýlýr. Dilin kurallarý içsel bloklarda da kullanýmýný engellemez.
+Gerekirse bir kontrol bloðunun bile ana bloðunda bile yapýlabilir(uygulama pratiðinde genelde global alanda veya bir fonksiyonun ana bloðu 
+dýþýnda görülmez)
+
+
+using bildirimi ile tanýtýlan isim(yukarýdaki örnekteki x ismi) using bildiriminin yapýldýðý scope'a enjekte edilmiþ olur.
+Yani sanki orada öyle bir isim tanýtýlmýþ gibi etki eder. Artýk o scope'da o ismin kullanýlmasý engellenmiþ olur.
+//////////////////////////////////////////////////////////////////
+void f1()
+{
+	using Neco::x;
+
+	int x; //sentaks hatasý
+
+	x = 34;
+}
+//////////////////////////////////////////////////////////////////
+using bildirimi ile x ismi bu isim alanýna enjekte edildi, adeta burada tanýmlanmýþ gibi.
+using Neco::x; bildirimi ile artk bu isim baþka amaçla kullanýlamaz.
+
+
+Yine geçersiz bir kod çünkü using bildirimi ile isim bu sefer de global alana enjekte edildi.
+Ýsim global alanda tek olmalý.
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x = 10;
+	class Myclass {
+
+	};
+}
+
+using Neco::x;
+double x;	//geçersiz
+
+int main()
+{
+
+}
+//////////////////////////////////////////////////////////////////
+
+
+Geçerli çünkü scope'lar farklý. Ýsim using bildirimi ile global isim alanýna enjekte edildi.
+//////////////////////////////////////////////////////////////////
+using Neco::x;
+
+void f()
+{
+	int x = 56;
+}
+//////////////////////////////////////////////////////////////////
+
+
+Ýlkinde main'de tanýmlanan x, ikincide isim alanýndaki x isminin deðeri yazdýrýlýr.
+//////////////////////////////////////////////////////////////////
+using Neco::x;
+
+int  main()
+{
+	int x = 56;
+
+	std::cout << "x = " << x << endl;
+
+	std::cout << "x = " << Neco::x << endl;
+}
+//////////////////////////////////////////////////////////////////
+
+
+using bildirimlerinde virgüllerle ayrýlan liste kullanma þansý yok.
+Birden fazla isim böyle enjekte edilmek istendiðinde her biri ayrý ayrý bildilmeli.
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x = 10, y = 34;
+}
+
+using Neco::x, y; //geçersiz
+using Neco::x, using Neco::y; //geçersiz
+//////////////////////////////////////////////////////////////////
+
+
+
+using namespace declaration:
+
+using namespace Neco;
+buraya iliþkin kurallar using bildirimine benzer gibi görünse de aslýnda farký kurallar mevcut.
+Bu bildirimin de týpký using bildiriminde olduðu gibi bir scope'u var. Yine bu bildirim sadece global alanda yapýlmak 
+zorun deðil. Yine bir fonksiyonun ana bloðu içinde yapýlabilir.
+using bildiriminden farký, tek bir isim deðil isim alanýndaki tüm isimler için yapýlýr.
+
+//////////////////////////////////////////////////////////////////
+namespace Neco {	//bildirim olmasaydý - 1
+	int x = 10, y = 34, z = 456;
+	class Myclass {
+
+	};
+}
+
+
+int x = 10, y = 34, z = 456; //bildirim ile - 2
+class Myclass {
+
+};
+
+using namespace Neco;
+//////////////////////////////////////////////////////////////////
+using bildirimi ile, bu bildirimin görünür olduðu yerde bu namespace içindeki isimlerin sanki namespace'in içinde 
+deðilmiþ gibi görünmesi saðlanýr. Bildirim olmasaydý 1'deki bir görünüm olacaktý, bildirim ile 2 þeklindeki 
+görünür hale gelir. Ancak bu bildirimin scope'una enjekte etmez. using bildirimi ile using namespace bildirimi
+arasýndaki fark using bildiriminin ismi o alana enjekte etmesi ama using namespace bildiriminde ise sadece bu þekilde
+görünür kýlar. 
+
+f1 içindeki x = 45; ifadesi geçerli. Bu namespace bildirimi olmasa, yani namespace içindekiler doðrudan global alanda
+olsaydý isim arama kurallarý nasýl olacaktýysa þimdi de öyle. 
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x = 10, y = 34, z = 456;
+	class Myclass {
+
+	};
+}
+
+using namespace Neco;
+
+void f1()
+{
+	x = 45;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+int x = 567; ifadesi de geçerli. Eðer using bildirimi olsaydý bu geçersiz olurdu, isim alanýna enjekte ettiðinden.
+Ancak buradaki problem þu f1 içindeki gibi bir kod x ismini kullandýðýndan artýk ambiguity oluþur. Çünkü x = 567;
+ifadesindeki x ismi global alanda görülür durumda, namespace içindeki x ismi de using namespace bildirimi nedeniyle
+görülür durumda. Buradaki hata ambiguity hatasý.
+using namespace bildirimi isim alanýna enjekte etmez. Bu yüzden int x = 567; tanýmlamasýna sentaks hatasý vermez.
+Ýsim alanýna enjekte ediyor olsaydý o zaman ayný scope'da ikinci isim tanýmlanmýþ olur ancak buraya bir isim
+enjekte edilmediðinden isimler halen birbirinden gizleniyor.
+Bu ambiguity hatasý için eðer using namespace bildirimi olmasaydý bu durumda görünürdeki x, int x = 567; deki olurdu.
+using bildirimi nedeni ile diðeri de görünür hale geldi. 
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x = 10, y = 34, z = 456;
+	class Myclass {
+
+	};
+}
+
+using namespace Neco;
+
+int x = 567;
+
+void f1()
+{
+	x = 45; //çift anlamlýlýk hatasý
+	Neco::x = 56; //geçerli, isim alaný içindeki x
+	::x = 56; //geçerli, global alandaki x
+}
+//////////////////////////////////////////////////////////////////
+
+
+using namespace bildirimi yapmak mecburi deðil bazý durumlarda bilerek yapýlmaz.
+namespace Neco bir kütüphaneden, namespace Akin baþka bir kütüphaneden gelir.
+Bunlar farklý isim alanlarýnda olduðu için zaten çakýþma olmaz, namespace'in amacý zaten bu.
+Ýki isim alanýnda ortak isimler var.
+Burada iki isim alaný için de using namespace bildirimi yapýlýrsa ayný ambiguity yine olacak.
+Programcý using namespace bildirimlerini yaptýktan sonra main'de x ismini doðrudan kullanýrsa yine sentaks
+hatasý. Ýki isim alanýnýn birlikte bulnmasý geçerli çünkü isim alanýna enjekte etmiyorlar. Ýki isim alanýndaki
+x'ler using namespace bildirimleri ile görünür hale gelir, derleyici hangi x'i alacaðýný bilemez hata verir.
+//////////////////////////////////////////////////////////////////
+///lib1.h
+namespace Neco {
+	int x = 10, y = 34, z = 456;
+	class Myclass {
+
+	};
+}
+
+///lib2.h
+namespace Akin {
+	int x = 10, y = 34, z = 456;
+	class Myclass {
+
+	};
+}
+
+int  main()
+{
+	Neco::x = 43; //geçerli
+	Akin::x = 12; //geçerli
+} 
+//////////////////////////////////////////////////////////////////
+
+
+using namespace bildirimi, func fonksiyonunun gövdesinde yapýlýr.
+Bu durumda main içinde x isminin kullanýlmasý gerçersiz ancak func bloðu içinde x ismini kullanmak geçerli.
+O blok içinde Neco isim alanýndaki isimler sanki Neco namespace'i içinde deðil global alandaymýþ gibi görülür durumda.
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x = 10, y = 34, z = 456;
+	class Myclass {
+	};
+}
+
+void func()
+{
+	using namespace Neco;
+	
+	x = 34; //geçerli
+}
+
+int  main()
+{
+	x = 34; //geçersiz
+} 
+//////////////////////////////////////////////////////////////////
+
+
+using bildirimi olsa sentaks hatasý olurdu.
+int x = 5; ifadesi sentaks hatasý deðil.
+Burada ambiguity yok ama main'deki x ismi global x ismini gizler. 
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	int x = 10, y = 34, z = 456;
+	class Myclass {
+	};
+}
+
+int  main()
+{
+	using namespace Neco;
+
+	int x = 5;
+
+	std::cout << x << std::endl; //5
+} 
+//////////////////////////////////////////////////////////////////
+
+
+Arguement Dependent Lookup(ADL):
+
+namespace içindeki func isimli fonksiyona çaðrý doðrudan böyle yapýlamaz.
+Ya Aykut::func() þeklinde çaðrýlmalý ya da bu isme iliþkin bir using bildirimi veya using namespace bildirimi olmalý.
+//////////////////////////////////////////////////////////////////
+namespace Aykut {
+	void func();
+}
+
+int  main()
+{
+	func(); //geçersiz
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+isim alaný içinde bir fonksiyon bir de sýnýf bildirimi var.
+Mainde o isim alaný içindeki sýnýf türünden bir nesne hayata getirilir.
+func fonksiyonu çaðrýldýðýnda sentaks hatasý olmadýðý görülür. Normalde yukuarýdaki gibi func fonksiyonu çaðrýldýðýnda
+beklenti geçersiz olmasý.
+Burada derleyicinin func ismini Aykut namespace'i içinde arayýp bulmasýnýn nedeni ADL kuralý.
+//////////////////////////////////////////////////////////////////
+namespace Aykut {
+	class Myclass {
+
+	};
+	void func(Myclass &r);
+}
+
+int  main()
+{
+	Aykut::Myclass m;
+	
+	func(m); //geçerli, ADL
+} 
+//////////////////////////////////////////////////////////////////
+
+
+ADL'e göre eðer bir fonksiyona gönderilen argümanlardan herhangi biri, bir namespace içinde tanýtýlan türden ise o zaman 
+bu fonksiyonun ismi normal aramanýn dýþýnda bu namespace içinde de aranýr. Yukarýdaki örnekte func fonksiyonun parametresi
+yine Aykut namespace'i içinde tanýtýlan Myclass türünden. Derleyicinin func ismini Aykut namespace'inde de aramasýnýn nedeni
+bu argümanýn bu namespace'in içinde tanýtýlan türlerden olmasý. Ýsim arama argümana baðlý olarak yapýlýr.
+Bir fonksiyon çaðýrýyoruz, fonksiyonun ismini nitelemesek bile fonksiyona gönderdiðimiz argüman eðer bir namespace içindeki
+türlerden birinden ise derleyici o fonksiyonun ismini o namespace içinde de arar.
+Hatta bir fonksiyon olduðu düþünülsün, 4 tane argüman alacak her argümanda farklý bir namespace içindeki türden o zaman o isim
+4 namespace içinde de aranýr. Tüm argümanlar için geçerli.
+Mekanizma tamamen user defined türler için geçerli.
+
+
+
+Burada da bir ADL var.
+<< ile operator overloading var, burada aslýnda bir fonksiyon var. operator<< fonksiyonu kullanýlýyor.
+s ismi tanýmlandý o yüzden buluyor, cout ismi de std ile nitelendi o yüzden buluyor.
+operator<<'in  bildirimi string baþlýk dosyasýnda, o da std namespace'i içinde. Tüm string baþlýk dosyasý std isim
+alaný içinde. Nasýl oluyor da ortada bir niteleme yokken std namespace'i içindeki bu fonksiyon bulunuyor ?
+Operatör sentaksý kullanýlmasa: operator<<(std::cout, s) þeklinde yazýlýr. operator<< fonksiyonu için std:: ile nitelenmese de 
+derleyici gitti std isim alanýna baktý. Bunun std namespace'i içinde aranmasýnýn nedeni, fonksiyona gönderilen argümanýn
+veya argümanlardan birinin std isim alaný içinde tanýmlanan türlerden birinden olmasý. string türü veya cout'un dahil olduðu
+ostream türü std isim alaný içinde. 
+//////////////////////////////////////////////////////////////////
+int  main()
+{
+	std::string s = "ali";
+	std::cout << s;
+		
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+Bir isim normal olarak görünürken, bir baþka isim de ADL nedeniyle görünürse bu iki isim arasýnda bir seçilik kriteri yok.
+Ýsmin ADL ile bulunuyor olmasý görünen isimler arasýnda bir seçicilik yaratmaz.
+Bu iki fonksiyon birbirinden ayrý fonksiyonlar. Neco::Myclass m; ifadesi ile Neco namespace'i içindeki Myclass sýnýfý türünden
+bir nesne yaratýlýr. Eðer global func fonksiyonu olmsasaydý;
+func(m); ifadesinde bir sentaks hatasý olmazdý, func isminin bulunma nedeni ise ADL olurdu.
+ADL ile bulunacak olan fonksiyon yorum satýrýna alýnsa yani sadece global func fonksiyonu olsa
+func(m); ifadesi yine geçerli bu sefer global func fonksiyonu çaðrýlýr.
+Ancak iki fonksiyona varken func(m) ifadesi geçersiz olur, hatanýn sebebi ise ambiguity.
+//////////////////////////////////////////////////////////////////
+namespace Neco {
+	class Myclass {
+
+	};
+	void func(Myclass &) {}
+}
+
+void func(Neco::Myclass &) {}
+
+int  main()
+{
+	Neco::Myclass m;
+
+	func(m); //geçersiz, ambiguity
+		
+} 
+//////////////////////////////////////////////////////////////////
+
+
+using bildirimi ile veya ADL ile bir overloading etkisi yaratýlabilir.
+Her iki isim alanýnda ayný isimde func fonksiyonu var. Eðer parametrik yapýlarý da ayný olsaydý, func fonksiyonuna
+yapýlan çaðrý geçersiz olurdu, çünkü isim alaný için de using bildirimi yapýldýðýndan bu durumda ambiguity oluþurdu.
+Ancak iki fonksiyonun parametrik yapýlarý birbirinden farklý olduðundan ve de using namespace bildirimlerinden dolayý
+her iki fonksiyon da sanki global alandaymýþ gibi görülür. Bu durumda da ayný isimde parametrik yapýlarý farklý iki
+fonksiyon olmuþ olur, bu da function overloading.
+//////////////////////////////////////////////////////////////////
+namespace Ali {
+	void func(int) {}
+}
+
+namespace Veli {
+	void func(double) {}
+}
+
+using namespace Ali;
+using namespace Veli;
+
+int  main()
+{
+	func(19);
+		
+} 
+//////////////////////////////////////////////////////////////////
+
+
+unnamed namespace özelliði: (isimsiz isim alaný)
+
+namespace yazýlýr ancak yanýnda bir isim yok.
+//////////////////////////////////////////////////////////////////
+namespace{
+	int x, y;
+}
+int main()
+{
+	x = 20;
+}
+//////////////////////////////////////////////////////////////////
+
+unnamed namespace C'deki statik globallere bir alternatif. Bu isimsiz isim alanýnýn içine ne konulursa sadece bu modülden
+kullanýlabilecek diðer modüllerden görülmeyecek varlýklar. Bu durumda buradaki isimler hiç nitelenmeden görülür durumda.
+Derleyici arkaplanda sanki bu namespace'e kendi bir isim vermiþ de onun da using bildirimini yapmýþ gibi kod üretir.
+Dilin kurallarýnca bu isimler doðrudan görülür kabul edilir, týpký bir global deðiþken gibi. Zaten nitelenme þansý yok.
+Kaynak dosya baþýan tek ve dýþarýdan gizlenmiþtir. Eðer bazý varlýklar sadece bir kaynak dosyada kullanýlacaksa, diðer
+modüllerdeki isimlerle çakýþmasý istenmiyorsa, diðer modülleri bu isimler ilgilendirmiyorsa bu isimleri global alanda 
+statik anahtar sözcüðü ile bildirmek yerine böyle bir namespace içinde kullanabiliriz.
+
+
+statik global deðiþkenler için veya fonksiyonlar için kullanýlabildiði gibi türler de konulabilir. 
+Böylece bunlar toplu bir yerde durur.
+//////////////////////////////////////////////////////////////////
+namespace{
+	int x, y;
+}
+//////////////////////////////////////////////////////////////////
+x ve y global baþka kimse kullanmayacak. Myclass da bildiðimiz normal bir sýnýf ama dýþarýdan kullanýlmayacak.
+Sadece bu kod dosyasý kullanýr.
+
+
+Bir kütüphanenin isimleri bir namespace içine almasý isim çakýþmasý riskini tamamen engeller mi ?
+Çok büyük bir oranda engeller ancak namespace isimlerinin de çakýþma riski var. Sonuçta isim alanlarýnýn da bir
+ismi var. 
+Aþaðýdaki kod sentaks hatasý. Ýsim alanýnýn kendi ismi de isim çakýþmasý riskine sahip.
+//////////////////////////////////////////////////////////////////
+namespace Fethi {
+
+}
+
+class Fethi {
+
+};
+//////////////////////////////////////////////////////////////////
+
+
+Bu riski tamamen otadan kaldýrmak adýna, isim alanlarýnýn isimleri özelleþtirilebilir.
+Ancak bu durumda client kodlar için bu ismin kullanýlmasý, kullaným zorluðu meydana getirebilir.
+Client kod buradaki isimleri kullanmak için namespace adý ile nitelerken her defasýnda bu uzun ismi yazmalý.
+//////////////////////////////////////////////////////////////////
+namespace CSD_Project_Group{
+	int x, y, z;
+}
+//////////////////////////////////////////////////////////////////
+
+
+Bunu engellemek için dilin bir aracý var, bu araç namespace alias(isim alaný eþ ismi)
+Bir isim alanýna typedef bildirimi gibi namespace'in ismini temsil eden, onun yerine geçen yeni bir isim 
+oluþturulabilir. CSD_Project_Group ismini clien kod oluþturmadý, deðiþtirmesi mümkün deðil. Ancak bu ismin yerine
+geçen yeni bir isim oluþturabilir.
+//////////////////////////////////////////////////////////////////
+namespace CSD_Project_Group{
+	int x, y, z;
+}
+
+namespace Fethi = CSD_Project_Group;
+
+int main()
+{
+	Fethi::x = 23;
+}
+//////////////////////////////////////////////////////////////////
+Artýk Fethi ismi de derleyici için tamamen CSD_Project_Group ismi ile eþ anlamlý.
+
+
+
+Bunun bir faydasý da isim alanlarýnýn nested olduðu, iç içe olduðu durum.
+Myclass sýnýfýný derleyiciye aratýp buldurmak için yazýlmasý gereken kod;
+CSD_Project_Group::SecretPRoject::Myclass m; ifadesi yazýlmalý.
+Bunun yerine nested bir isim alanýna da alias verilebilir.
+//////////////////////////////////////////////////////////////////
+namespace CSD_Project_Group{
+	int x, y, z;
+	namespace SecretProject{
+		class Myclass{
+		
+		};
+	}
+}
+
+namespace Pro = CSD_Project_Group::SecretPRoject;
+
+int main()
+{
+	Pro::Myclass m;
+}
+//////////////////////////////////////////////////////////////////
+
+
+std::regex_constants::basic ifadesi geçerliyse, regex_constants ya bir sýnýf olacak ki deðil.
+Buradaki regex_constants bir nested namespace. std isim alaný içindeki bir içsel isim alaný.
+//////////////////////////////////////////////////////////////////
+int  main()
+{
+	std::regex_constants::basic
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+TEMPLATES (ÞABLONLAR)
+
+C++'da derleyicinin kod yazmasýný saðlayacak bir metakod. Derleyiciye bir þablon verilmesinin sebebi, derleyicinin o þablondan
+faydalanarak bizim için kod yazacak olmasý. Ýki ayrý kategoriye ayrýlýr, fonksiyon þablonlarý ve sýnýf þablonlarý.
+Fonksiyon þablonlarý öyle metakodlar ki derleyici bu metakodlardan faydalanarak bir fonksiyonun kodunu yazar. O þablon
+derleyiciye bir fonksiyon kodunu yazdýrmak amaçlý. Sýnýf þablonu ise komple bir sýnýfýn kodunu yazdýrma amaçlý.
+Ortak ve ortak olmayan özellikleri var. C++'nýn standart kütüphanesinin neredeyse tamamý þablon. Ortada gerçek kod yok 
+metakodlar var. Derleyici, compile time'da bizim için önce fonksiyon ve sýnýflarýn kodunu yazar, ondan sonra onu derler.
+C derleyicisi sadece çeviri iþini yapar, C++ derleyicisi kod da yazar.
+Çok büyük çoðunlukla þablonlarýn kullanýcý tarafýnda oluruz, metakod yazdýðýmýz durumlarda tabi olacak ancak daha çok 
+þablonlarýn kullanýcýsý oluruz. Þablonlar çoðunlukla standart kütüphaneden gelir. Üçüncü parti kütüphanelerin de template
+olduðu durumlar var. C++'nýn en önemli kütüphanelerinden biri olan ve standart olmayan  kütüphanesi Boost kütüphanesi de 
+önemli bir þablon bazlý kütüphane. Üçüncü parti olarak kullanýlan en yaygýn kütüphane boost kütüphanesi.
+Þablonlarýn kendilerini yazma durumumuz görece daha az.
+
+Þablonlar generic programlamanýn en önemli aracý.(türden baðýmsýz programlama)
+Generic programlamanýn birbirinden çok farklý sonuçlar veren birkaç farklý implementasyon biçimi mevcut. 
+C tarzý generic programlamada, fonksiyonlarýn parametresi void * olur, fonksiyonlara istenilen argüman geçilir.
+C'de veri yapýlarý kütüphaneleri çoðunlukla void * parametrelidir.
+C++'da þablonlarla gelen genericlik bunla karýþtýrýlmamalý. Burada compile time'da derleyici o sýnýfý ya da fonksiyonu 
+fiilen yazar.Avantajlardan biri eðer kullanýlmýyorsa yani bir fonksiyona çaðrý yapýlmýyorsa veya o sýnýf hiç kullanýlmýyorsa
+onun kodu hiç yazýlmaz. Böylece bir kod ekonomisi saðlanýr. 
+Daha sonradan eklenen sýnýflar için bunlar þablon olduðundan o sýnýflarý da kullanacak sýnýflar ve fonksiyonlar yazma 
+þansýna sahibiz.
+Fonksiyon þablonlarý fikri, algoritma aslýnda bir iþin nasýl yapýlacaðýný belirler. Birçok algoritmada, algoritma türe
+baðlý deðil. Örneðin diziyi reverse etme algoritmasýnda dizinin elemanlarýnýn türü önemli deðil. Swap iþlemi de ayný þekilde.
+Nesnelerin türü int de olsa double da olsa algoritma bu. Her ne kadar böyle olsa da C, C++ gibi dillerde algoritmadan koda
+geçiþte kod bizden tür bekler. Þablonlarla bu artýk tür farklýlýðýnýn getirdiði farklýlýk ortadan kalkar. Türe göre gerçek
+kodun yazýlmasý iþini derleyici yapar.
+Sýnýflar söz konusu olduðunda bu iþten en fazla fayda gören veri yapýlarýný implemente eden sýnýflar. Veri yapýlarýnýn genel
+organizasyonu belli ancak örnek olarak baðlý listede ne tutulacaðýna baðlý olarak kod deðiþir. 
+
+
+Function Templates (Fonksiyon Þablonlarý)
+
+function template, template'in metakod'un kendisi. C++'nýn kurallarýna göre yazýlmýþ gerçek kodun kendisi deðil metakod.
+template function ise, kodu template'den oluþturularak derleyici tarafýndan yazýlmýþ anlamýnda.
+
+Genel olarak bir þablon oluþturmak için template anahtar sözcüðü zorunlu.
+template anahtar sözcüðünden sonra açýsal parantez olur, açýsal parantez içinde template parametreleri denilen parametreler
+bildirilir. template parametreli, bir tür bilgisi yerine kullanýlacak isimler. Burada kullanýlan T ismi aslýnda bir tür 
+ismini temsil eder. Derleyici bir þekilde T isminin yerine hangi türün kullanýlacaðýný öðrenir, gerçek kodu ona göre yazar.
+template'lerin böyle parametrelerine template type parameter denir, tür parametresi denir. Öyle isimler ki türleri temsil eder.
+Bir de ikinci bir template parametre türü olarak non-type parametreler var. Bu isimler ise sabitin yerine geçer. Compile time'da
+derleyici o sabitin kaç olduðunu bilir, o ismin kullanýldýðý yerde derleyici o sabiti kullanýr.
+Derleyiciye compile time'da kullandýðýmýz bir isim karþýlýðý bir türü kullanarak kod yazma olanaðý verilir.
+
+Tür parametreleri için C++'nýn ilk döneminde(standartlar öncesi dönemde) tek bir keyword vardý, class anahtar sözcüðü.
+T bir tür olmak üzere anlamýna gelir. Sanki T'nin bir class type olmasý mecburiyeti varmýþ gibi gözükse de öyle deðil, T türü pekala 
+int de olabilir. Hala kullanýlýyor, legalite açýsýndan bir problem de yok.
+Ancak bu anlamda kullanýlan ikinci bir anahtar sözcük typename anahtar sözcüðü. Her iki anahtar sözcükte T bir tür olmak üzere demek.
+Buradaki T isimlerine, template type parameter denir.
+template<class T>
+template<typename T>
+
+non-type parametre için de doðrudan türün kendisi yazýlýr ve bir isim verilir.
+template<int size>
+size bir sabit olmak üzere demek, derleyici gerçek kodu yazarken size yerine ne kullanacaðýný bilir.
+
+
+Derleyici compile time'da T türünün int olduðunu anlarsa, int parametrede bir fonksiyon yazar.
+Double olduðunu anlarsa, double türden fonksiyon yazar.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x)
+{
+
+}
+//////////////////////////////////////////////////////////////////
+
+
+Derleyici compile time'da T'nin string, size'in ise 20 olduðunu öðrenirse func fonksiyonunun kodunda
+oluþturacaðý bu yerel dizinin elemanlarýnýn türü string, eleman sayýsý da 20 olur.
+//////////////////////////////////////////////////////////////////
+template<typename T, int size>
+void func(T x)
+{
+	T a[size];
+}
+//////////////////////////////////////////////////////////////////
+
+
+Derleyiciye bizim istediðimiz bir türü kullanarak kod yazmasý saðlatýlýr veya istediðimiz sabit veya sabitler
+kullanýlarak kod yazmasý saðlatýlýr.
+
+Tür parametresinin sayýsal olarak bir sýnýrý yok. Birden fazla olmasý durumunda farklý isimde olmalýlar.
+typename<typename T, typename U>
+T ve U türler olmak üzere...
+Derleyici compile time'da sadece T türünün deðil, U türünün de ne olduðunu bilmek zorunda ve ona göre kod üretmek
+durumunda.
+
+Aynýsý non-type parametreler için de geçerli.
+template<int low, int high>
+low ve high sabitler olmak üzere..
+
+template<typename T, U> ise geçersiz yani typename anahtar sözcüðünü bir kez kullanýp birden fazla tür ismi
+belirtmek söz konusu deðil.
+
+template tür parametresi ile fonksiyon parametresi birbirine karýþtýrýlmamalý.
+Bundan sonrasý normal bir fonksiyon tanýmlama sentaksý nasýlsa öyle. Fonksiyonun geri dönüþ deðeri türü, adý ve 
+ana bloðu yazýlýr. Ancak artýk doðrudan T veya T'ye baðlý olan türlerin fonksiyonun geri dönüþ deðerinin türü olarak,
+parametrele deðiþkenlerinin türü olarak veya lokal deðiþkenlerinin türü olarak da kullanabiliriz.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x, T y)
+{
+	T *ptr = &x;
+	T &r = y;
+	////
+}
+//////////////////////////////////////////////////////////////////
+Derleyici compile time'da T türünün int olduðunu anlarsa geri dönüþ deðeri olmayan, iki tane int parametresi olan bir 
+fonksiyon tanýmlar. ptr, int * türünden, r ise int nesneye referans olur.
+
+Yukarýdaki fonksiyonun kodu deðil!
+Derleyiciye fonksiyonun kodunu yazdýrmak için kullanýlan bir þablon.
+Bunun derleyici açýsýndan bir önemi de, derleyici bir þablonun üstünden geçtiðinde minimalst bir kontrol yapar.
+T türünün ne olduðunu bilmediðinden neyin sentaks hatasý olup olmadýðýný bilemez.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x)
+{
+	x.func()++;
+}
+//////////////////////////////////////////////////////////////////
+Derleyici bu ifadeye sentaks hatasý vermez. Kodun legalitesi T türünün ne olduðuna baðlý. T türü int ise error.
+Ancak T türü bir sýnýf ismi ise, sýnýfýn func isminde bir fonksiyonu varsa ve de fonksiyonun geri dönüþ deðeri
+türü örneðin bir referans ve de ayný sýnýfýn operator++ overloadý ise bu kod legal olur.
+Bu yüzden derleyici þablonun kendisinin üstünden geçtiðinde birince etapta çok kaba bir kontrol yapar.
+; silindiðinde bile sentaks hatasý olmayabilir, bu kodun kendisi deðil þablon.
+Asýl kontrol derleyici bu þablondan gerçek bir fonksiyonun kodunu yazmaya çalýþtýðýnda yapar, ayný zamanda yazdýðý 
+fonksiyonun kodunu derlerken de normal sentaks kontrolünü yapar.   
+
+
+Derleyicinin gerçek kodu yazabilmesi için T türünün ne olduðunu bilmesi gerekir. Fonksiyon þablonlarýnda derleyicinin
+bu template tür parametrelerinin veya non-type parametrelerinin yerine hangi türleri veya hangi sabitleri yazaacaðýný
+anlamasýna yönelik iki mekanizma var, biri çýkarým mekanizmasý(deduction) diðeri ise açýkça derleyiciye programcý olarak
+bunun söylenmesi.
+Sýnýf þablonlarýnda ise çýkarým mekanizmasý hiç yok. Sýnýf þablonlarýnda tek olasýlýk derleyiciye buradaki template tür 
+parametrelerinin ne olduðunu yazdýðýmýz kodla biz programcý olarak söyleriz.
+
+vektör nesneleri oluþturulurken kullandýðýmýz sentaks;
+//////////////////////////////////////////////////////////////////
+int  main()
+{
+	vector<int> ivec;
+} 
+//////////////////////////////////////////////////////////////////
+Aslýnda vector isimli bir sýnýf þablonu var, o sýnýf þablonunun template tür parametresi olarak int kullanýlmasý gerektiði
+derleyiciye söyleniyor. Burada çýkarým mekanizmasý yok.
+
+
+swap bir fonksiyon þablonu. swap'ýn kendisi bir fonksiyon deðil.
+swap þöyle bir þablon;
+template<typename T>
+void swap(T &r1, T &r2){
+	T temp{r1};
+	r1 = r2;
+	r2 = temp;
+}
+Türe baðlý olmasýna raðmen çaðrýyý yaparken tür bilgisini söylemiyoruz.
+Buradaki mekanizma deduction.
+//////////////////////////////////////////////////////////////////
+int  main()
+{
+	int x = 10, y = 456;
+	
+	swap(x, y);
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+
+17_02_2018_CUMARTESÝ
+
+
+C++'nýn standart kütüphanesinden bitset sýnýfý. Bitsel iþlemler için kullanýlýr.
+Bitset sýnýfý þu þekilde düþünülebilir;
+template<size_t n> //non-type parametre, n bir sabit
+class bitset{
+
+};
+Dolayýsýyla derleyiciye sýnýfýn kodunu yazarken kullanacaðý sabitin ne olduðunu söylememiz gerekiyor.
+//////////////////////////////////////////////////////////////////
+int  main()
+{
+	bitset<32> x;
+} 
+//////////////////////////////////////////////////////////////////
+Derleyici bu sýnýfýn kodunda bazý yerlerde sabit kullanmak zorunda, o sabit yerine 32 sabitini kullanmasýný istedik.
+Tipik bir non-type parameter uygulamasý. 
+
+
+
+array template'leri de, C++11 ile standart haline getirilmiþ eski bir boost sýnýfý. Amacý dizileri sarmalamak. C++'da 
+artýk C tarzý diziler yerine vektör veya array kullanýlýr. Diziyi doðrudan kullanmak yerine array template'i kullanýlýr.
+array template'inde hem type parametre hem de non-type parametre mevcut.
+template<typename T, size_t size>
+class Array{
+
+};
+þeklinde düþünülebillir. Ýki template parametresi var. Ýlki sarmalanacak dizinin öðelerinin türü, ikinci non-type 
+parametre ise dizinin boyutu.
+//////////////////////////////////////////////////////////////////
+int  main()
+{
+	int a[10];
+	array<int, 10> arr;
+} 
+//////////////////////////////////////////////////////////////////
+maliyet açýsýndan ikisinin bir farký yok. Köþeli parantez operatörü ile yine dizinin öðelerine array sýnýfý içinde de
+eriþilir. C tarzý dizinin yapamayacaðý bazý iþeri de yapar. 
+
+
+Bu tür kodlarý yazdýrmak için, non-type parametreye verilecek deðerin bir constant expression, sabit ifadesi olmasý
+gerekir.
+
+Ýster type parametre olsun ister non-type parametre olsun, derleyicinin compile time'da kodu yazabilmesi için T türü 
+yerine neyi alacaðýný ya da size yerine hangi sabiti kullanacaðýný bilmesi gerekiyor. Bunu bilmesinin de 2 yolu vardý.
+Ýlki deduction, derleyici bunu contextden kendisi çýkarmaya çalþýr, ikincisi ise programcýnýn kendisinin söylemesi.
+Fonksiyon þablonlarýnda her iki mekanizma da var.
+Sýnýf þablonlarýnda ise çýkarým doðrudan yok.
+
+
+
+Fonksiyon þablonlarýnýn genel sentaksýna iliþkin;
+Compile time'da derleyici aslýnda 3 tane fonksiyon yazar;
+biri string &, string &
+biri int &, int &
+diðeri ise double &, double &
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void Swap(T &r1, T &r2)
+{
+	T temp{ r1 };
+	r1 = r2;
+	r2 = temp;
+}
+
+int  main()
+{
+	int x = 10, y = 20;
+	string s1{ "alican" }, s2{ "edanaz" };
+	double d1 = 2.3, d2 = 6.7;
+
+	Swap(x, y);
+	Swap(s1, s2);
+	Swap(d1, d2);
+
+	cout << x << " " << y << endl;
+	cout << s1 << " " << s2 << endl;
+	cout << d1 << " " << d2 << endl;
+} 
+//////////////////////////////////////////////////////////////////
+Derleyici bir fonksiyon yazmasý gerektiðini ve yazdýðý fonksiyonun parametrelerinin türünün ne olmasý gerektiðini
+fonksiyon çaðrý ifadesinden anladý. Burada kulanýlan mekanizma deduction mekanizmasý.
+
+
+Þablonlar üstünde derleyici 3 aþamalý bir kontrol yapar. Biri þablonun kendisinin üstünden geçerken yaptýðý kontrol.
+Burada T türünün ne olduðunu bilmediðinden, T türünün kullanýmýna iliþkin bir sentaks hatasý vermesi mümkün olmaz.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T &r)
+{
+	r.foo();
+	++r;
+	r[10].foo();
+}
+//////////////////////////////////////////////////////////////////
+gibi bir iþlev yazýldýðýnda, T türünün ne olduðuna baðlý olarak kod legal olabilir, olmayabilir de.
+Birinci aþamada derleyiciler sadece çok bariz, her zaman hata olabilecek durumlarý kontrol ederler.
+
+
+Üçüncü kontrol ise açýk, T türünün int olduðunu bilse fonksiyonun parametresi int &r olurdu.
+Gerçekten int &r parametreli bir fonksiyonda r.foo() ifadesi nasýl ki sentaks hatasý olacaksa burada da derleyici
+ayný bu þekilde kontrol yapar ve sentaks hatasý verir.
+
+
+Fonksiyon þablonlarýnda en karýþýk konu, derleyicinin yaptýðý çýkarýmý nasýl yaptýðý, template arguement deduction.
+Swap fonksiyonunda, T'nin ne olmasý gerektiðini derleyici kendisi çýkarýmýný yaptý. Ýþte ikinci aþama kontrol burada.
+
+Template Arguement Deduction
+
+
+þeklinde bir þablon olsun, þablonun template tür parametresi var.
+Elimizde bir fonksiyon þablonu var diye, o fonksiyon þablonu ile yapýlacak tüm çaðrýlar legal olmak zorunda deðil.
+Ýki tipik illegalite durumu var. Birincisi fonksiyon çaðrýsýndan hareketle derleyicinin template parametrelerinin
+ne olduðunu anlama þansýnýn hiç olmamasý.
+
+Þablonun kendisinin olmasý bir sentaks hatasý deðil.
+Derleyicinin compile time'da bu kodu yazabilmesi için, T türünün ne olduðunu bilmesi gerekiyor.
+Fonksiyon çaðrýsýnda argüman bile yok, T türünün ne olduðunu anlama þansý yok.
+Derleyicinin verdiði sentaks hatasýnýn nedeni, eldeki çaðrýdan elde edilecek bilgiler T türünün ne olduðunu
+anlamasýna izin vermiyor.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+T func()
+{
+	return 1;
+}
+
+int  main(){
+	func(); //geçersiz
+} 
+//////////////////////////////////////////////////////////////////
+
+
+T türü, yerel bir deðiþkenin türü.
+Derleyici bu fonksiyon çaðrýsýndan T türünün ne olduðunu yine anlayamaz.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func()
+{
+	T x;
+}
+
+int  main(){
+	func(); //geçersiz
+} 
+//////////////////////////////////////////////////////////////////
+
+
+Yani derleyicinin bir fonksiyonun kodunu yazabilmesi için T türünün ya da template tür parametrelerinin hangi türe
+karþýlýk geldiðini bilmesi gerekiyor. Bunu ya programcý olarak biz explicit olarak söyleriz ya da derleyicinin
+çýkarýmýna býrakýrýz. Derleyicinin çýkarýmýna býraktýðýmýzda da çýkarýmý yapabileceði araçlara sahip olmasý gerekir.
+
+
+Ýkinci bir error senaryosu daha var, ambiguity.
+
+Derleyicinin T türünün ne olduðunu gönderilen argümanlardan anlamasý gerekir.
+func(10, 29) çaðrýsý geçerli. Derleyici argüman olan ifadenin türüne bakar, 10 ifadesinin türü int.
+O zaman x de T türünden olduðuna göre T türünün int olmasý gerekir. y de T türünden, y'ye gönderilen argüman da int.
+func(10, 2.9) þeklinde func fonksiyonuna çaðrý yapýldýðýnda ise derleyici artýk bu çýkarýmý yapamaz. Ýlk argümana
+bakarsa T türünün int, ikinci argümana bakarsa T türünün double olmasý gerekir. Derleyici bu konuda arýk bir 
+çeliþki gördüðü için ambiguity hatasý verir.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x, T y)
+{
+
+}
+
+int  main(){
+	func(10, 29);
+	func(10, 2.9); //çift anlamlýlýk hatasý
+} 
+//////////////////////////////////////////////////////////////////
+
+
+þablon aþaðýdaki þekilde olsaydý ortada bir problem olmazdý.
+Yani func(10, 2.9) çaðrýsý da geçerli olurdu. Artýk derleyici her bir template tür parametresini ayrýca deduce 
+ederdi. T'nin int; U'nun ise double türden olduðunu anlardý.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+void func(T x, U y)
+{
+	std::cout << "type T is " << typeid(T).name() << endl;
+	std::cout << "type U is " << typeid(U).name() << endl;
+}
+
+int  main()
+{
+	func(10, 2.9); //geçerli
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+func fonksiyonu içinde foo ve g fonksiyonlarýna çaðrý yapýlýyor.
+foo ve g de þablon olabilir.
+Bunlarýn hepsi compile time'da olur. Derleyici func çaðrýsýný görünce template arguement deduction yapar.
+T'nin int, U'nun double olmasý gerektiðini anlar. Dolayýsýyla x'in türü int olduðundan foo'nun kendisi de bir
+template olduðundan onun da template tür parametresinin int olduðunu anlar. 
+g için de benzer iþi yapar.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void foo(T x)
+{
+	cout << "template foo : typename is: " << typeid(T).name() << endl;
+}
+
+template<typename T>
+void g(T x)
+{
+	cout << "template g : typename is: " << typeid(T).name() << endl;
+}
+
+template<typename T, typename U>
+void func(T x, U y)
+{
+	cout << "template func : typename is: " << typeid(T).name() << endl;
+	cout << "template func : typename is: " << typeid(U).name() << endl;
+	foo(x);
+	g(y);
+}
+
+int  main()
+{
+	func(10, 2.9);
+} 
+//////////////////////////////////////////////////////////////////
+
+
+template<typename ...> bu ifadeyi bir kere yazýp birden fazla fonksiyon için kullanmak gibi bir sentaks yok.
+her bir template'deki tür isimleri birbirinden ayrý, birbirleri ile scope olarak da ayrýlar, ilgileri yok.
+Baþlýk dosyasýnda birden fazla template varsa programcýlar bunlara ayný isimleri vermekten kaçýnmazlar.
+
+
+
+Nasýl fonksiyonlar hem bildirilip hem tanýmlanabiliyorsa, template olmalarý bildirimi engellemez.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void foo(T x);	//fonksiyon þablonunun bildirimi
+//////////////////////////////////////////////////////////////////
+Ýster fonksiyon þablonu ister sýnýf þablonu olsun bunlarýn yeri her zaman baþlýk dosyalarý. 
+Baþlýk dosyasýnda bunun bildiriminin olmasý kod üretimi için yeterli deðil. Bildirimin yapýlabilmesinin bazý baþka
+nedenleri var. Bu bildirim normal fonksiyon bildirimleri ile karýþtýrýlmamalý.
+Örnek olarak bu bildirimin kaan.h baþlýk dosyasýnda olduðu düþünülsün. necati.c de kaan.h'yý include etsin.
+Derleyici sentaks kontrolünü yapabilir ancak template kodun kendisi olmadýðý için kodu üretemez.
+Böyle bir kod yazýldýðý zaman bu derlenebilir ancak link edilme þansý yok.
+
+
+Fonksiyon dizi ismi ile çaðrýlýr bu durumda array to pointer conversion yapýlýr.
+Yani T türü int * türünden.
+Bir string literali ile fonksiyona çaðrý yapýldýðýnda yine array to pointer conversion yapýlýr.
+char türden const diziler olduðundan T türü için const char * çýkarýmý yapýlýr.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x){
+}
+
+int  main()
+{
+	int a[100];
+	const int b[100]{};
+
+	func(a); //T is int *
+	func(b); //T is const int *
+
+	func("neco"); //const char *
+} 
+//////////////////////////////////////////////////////////////////
+
+17 þubat 2018 cumartesi ders2_1 dakika 4
