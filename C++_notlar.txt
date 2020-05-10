@@ -7539,7 +7539,8 @@ Arka arkaya fonksiyon çaðrýlarý yapýlabilmesi adýna fonksiyonun geri dönüþ deðer
 dönüþ deðeri referans yapýlýr. Çýkýþ fonksiyonu ostream referansa giriþ fonksiyonu ise istream referansa geri döner. 
 Sýnýf türünden bir öðenin yazýdýrýlmasý durumunda, öðe deðiþmediðinden ikinci parametre const & seçilir.
 Extractor fonksiyonunda ise, amaç nesneyi deðiþtirmek olduðundan const'luk deðil sadece & olur. 
-friend olmasýnýn önemli bir nedeni de var böyle bir operasyon friend olmasaydý
+friend olmasýnýn önemli bir nedeni de var böyle bir operasyon friend olmasaydý implementasyonda bu sýnýf nesnesinin artýk bir artmasý ne anlama geliyorsa 
+çok büyük çoðunlukla private elemanlara eriþmesi gerekecek bu durumda friend olmak zorunda zaten.
 
 /////////////////////////////////////////////////////////////////////
 friend std::ostream &operator<<(std::ostream &os, const Integer &i){
@@ -19809,4 +19810,1613 @@ int  main()
 } 
 //////////////////////////////////////////////////////////////////
 
-17 þubat 2018 cumartesi ders2_1 dakika 4
+
+&x ifadesinin türü int *. 
+ptr'nin int * türünden olmasý için T'nin türünün int olmasý gerekir.
+T'nin türü int.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T *ptr) {
+	std::cout << typeid(T).name() << std::endl;
+}
+
+int  main()
+{
+	int x = 10;
+	func(&x); //T is int, ptr is int *
+
+} 
+//////////////////////////////////////////////////////////////////
+
+
+void func(T ptr); olduðunda ise, fonksiyona gönderilen int * olduðundan T'nin türü int * olur.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T ptr) {
+	std::cout << typeid(T).name() << std::endl;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+fonksiyonun parametersi bir fonksiyon göstericisi. func fonksiyonu foo ile çaðrýlýyor.
+foo'nun geri dönüþ deðeri int, parametresi int türden olduðundan T türü int.
+func'un parametresinin türü ise, geri dönüþ deðeri ve parametresi int olan bir fonksiyonun adresini tutacak olan
+pointer.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T (*f)(T)) {
+	std::cout << typeid(T).name() << std::endl;
+}
+
+int foo(int) {
+
+	return 1;
+}
+
+int  main()
+{
+	func(foo); //T is int, f is int(*)(int)
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+Bu durumda ise T int, U double türdendir.
+func'ýn parametresi ise, geri dönüþ deðeri int, parametresi double olan fonksiyon adresi göstericisi
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+void func(T(*f)(U));
+
+int foo(double);
+
+int  main()
+{
+	func(foo); // T is int U is double, f is int(*)(double)
+} 
+//////////////////////////////////////////////////////////////////
+
+
+2.kategori, parametrenin wrap olmasý durumu:
+
+
+x için T'nin türü int, fonksiyon parametresinin türü ise int &.
+y içinse T'nin türü const int, fonksiyon parametresinin türü ise const int &.
+T türü const int olduðunda, fonksiyon bloðu içinde T türünden lokal bir nesne oluþturulup, sonradan deðiþtirilmek
+istendiðinde geçersiz olur çünkü T türü const int.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T &x);
+
+int  main()
+{
+	int x = 10;
+	func(x); //T is int, x is int &
+
+	const int y = 20;
+	func(y); //T is const int, x is const int &
+} 
+//////////////////////////////////////////////////////////////////
+
+
+T'nin türü int olur, çünkü fonksiyona gönderilen r'nin türü int &.
+func fonksiyonunun parametresinin türü ise int &.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T &x);
+
+int  main()
+{
+	int x = 10;
+	
+	int &r = x;
+
+	func(r); //T is int, r is int &
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+func, a ile çaðrýlýyor. Artýk burada arrat to pointer conversion yok.
+parametre referans türden olmasaydý int * olurdu.
+þimdi ise int *'a referans deðil, 5 elemanlý int türden bir diziye referans.
+T'nin türü 5 elemanlý dizi türü, parametre ise 5 elemanlý int diziye referans.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T &x);
+
+int  main()
+{
+	int a[5]{0};
+
+	func(a); // T is int [5], r is int(&)[5]
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+func fonksiyonu a, b ile çaðrýldýðýnda geçerli. Çünkü her ikisi de T türü 5 elemanlý int dizi türü.
+func (a,c) ile çaðrýldýðýnda ise ambiguity hatasý oluþur. Birinci argümana bakýldýðýnda T'nin türü 4 elemanlý int
+dizi türü, ikinci argümana bakýldýðýnda ise T'nin türü 5 elemanlý int dizi.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T &r1, T &r2);
+
+int  main()
+{
+	int a[4];
+	int b[4];
+	int c[5];
+
+	func(a, b); //geçerli
+	func(a, c); //ambiguity
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+func("alican", "mehmet") ifadesi geçerli çünkü T türü 7 elemanlý const char dizi türü olarak alýnýyor.
+func("metin", "mehmet") ifadesi ise sentaks hatasý yine ambiguity hatasý var, biri 6 elemanlý diðeri 7 elemanlý
+const char türden dizi, tür farklýlýðý var.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T &r1, T &r2);
+
+int  main()
+{
+	func("alican", "mehmet"); //geçerli
+	func("metin", "mehmet");  //ambiguity
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+display fonksiyonuna sadece dizi geçilerek, boyut bilgisi geçilmeden tüm dizinin dolaþýlmasý saðlanýr.
+Farklý boyutlardaki dizi için geçerli, bu durumda referans zaten dizinin yerine geçeceði için kod geçerli.
+Aslýnda derleyici 2 farkllý dizi için 2 farklý fonksiyon yazmýþ olur.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void display(const T &r)
+{
+	for (int k = 0; k < sizeof(r) / sizeof(*r); ++k)
+		std::cout << r[k] << " ";
+	std::cout << std::endl;
+
+	/*for(auto x : r)
+		std::cout << x << " ";
+	std::cout << std::endl;*/
+}
+
+int  main()
+{
+	int a[5]{ 1,2,3,4,5 };
+	int b[10]{ 7, 81, 13, 41, 97, 44, 55, 67, 2, 3 };
+	
+	display(a);
+	display(b);
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+C'de bir dizinin boyutunu derleyiciye hesaplatmak için ön iþlemciye bunu yaptýrýrdýk.
+sizeof(a) / sizeof(*a) ifadesini ön iþlemciye yazdýrýrdýk.
+C++'da ise çok daha iyi bir olanak var, bunu bir fonksiyon þablonu halinde yazmak.
+arrsize(a) ifadesinde template arguement deduction kurallarýna göre T, int size sabiti ise 10 olur.
+T'nin türü 10 elemanlý int dizi türü olur. fonksiyon size ile geri döndüðünden doðrudan dizi boyutu elde edilir.
+int c[arrsize(a) * 2] ifadesinde dizi boyutunun geçerli olabilmesi için içindeki ifadenin sabit ifadesi olmasý
+gerekir. fonksiyon constexpr olarak tanýmlandýðýndan bu geçerli olur.
+constexpr fonksiyonlar, sabit ifadesi ile çaðrýldýðýnda geri dönüþ deðeri compile time'da elde edilir.
+constant expression ile çaðrýlmadýðýnda ise geri dönüþ deðeri run time'da elde edilir.
+//////////////////////////////////////////////////////////////////
+template<typename T, size_t size>
+constexpr size_t arrsize(T (&r)[size])
+{
+	return size;
+}
+
+int  main()
+{
+	int a[10] = { 0 };
+	int b[] = {2, 5, 5, 8, 8};
+	int c[arrsize(a) * 2];
+
+	cout << arrsize(a) << endl;
+	cout << arrsize(b) << endl;
+	cout << arrsize(c) << endl;
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+Eðer bir template tür parametresi varsa fakat fonksiyonun parametresi iki tane && ile yazýlmýþsa burada r kesinlike
+sað taraf referansý anlamýna gelmez. 
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T &&r)
+{
+}
+//////////////////////////////////////////////////////////////////
+Bu fonksiyonu sol taraf deðeri ile çaðýrýrsak r sol taraf referansý; sað taraf deðeri ile çaðýrýsak r sað taraf
+referansý olur.
+
+Modern C++'nýn önemli araçlarýndan biri, üçüncü kategori.
+Eðer fonksiyonun parametresi && olursa, böyle referanslara universal reference denir.
+
+
+Örnek olarak vektor sýnýfýnýn push_back fonksiyonu, fonksiyonun parametresi &&val.
+l-value referans mý r-value referans mý olacaðý tamamen compile time'da ne gönderildiðine baðlý olarak deðiþir.
+//////////////////////////////////////////////////////////////////
+int  main()
+{
+	vector<int> ivec;
+
+	ivec.push_back(10);
+} 
+//////////////////////////////////////////////////////////////////
+
+
+STL'de parametrik yapýsý þu þekilde olan birçok fonksiyon görülür.
+template<typename T>
+void func(T &&);
+
+
+Elimizde bir fonksiyon þablonu var ve fonksiyon þablonunun parametresi T türünden.
+T türünden parametre fonksiyon çaðrý operatörünün operandý yapýlmýþ.
+//////////////////////////////////////////////////////////////////
+template <typename T>
+void func(T f)
+{
+	f();
+}
+//////////////////////////////////////////////////////////////////
+
+T'nin hangi tür olarak çýkarýmýnýn yapýlmasý durumunda böyle bir kod legal olabilir ?
+Buradaki f gibi isimlere modern C++'da callable denir. Çünkü böyle bir template'den üretilen kodun geçerli olmasýný
+saðlayacak çok saydý senaryo var. 
+
+Bu fonksiyona bir fonksiyon adresi gönderilir, bu durumda derleyici T türünü bir function pointer olarak çýkarýmýný 
+yapar dolayýsýyla run time'da çaðrýlacak fonksiyonda o function pointer'in gösterdiði fonksiyonla olur. Bu durumda
+iþlevin parametresi bir iþlev göstericisi olur.
+
+func(foo) ifadesine derleyici compile time'da bakar. Bu durumda T'nin türünü void(*)(void) olmasý gerektiðini anlar.
+Böyle bir fonksiyon parametreli bir fonksiyon yazar, f(); ifadesinde çaðrýlan fonksiyonda func'a argüman olarak
+gönderilen foo fonksiyonu.	
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T f)
+{
+	f();
+}
+
+void foo()
+{
+	cout << "foo cagrildi" << endl;
+}
+
+int  main()
+{
+	func(foo);
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+f bir sýnýf nesnesi de olabilir, böyle sýnýf nesnelerine functor denir. T türü fonksiyon çaðrý operatörünü overload 
+eden bir sýnýf türü olabilir. T de o türden bir nesne olur. T bir sýnýf türüdür ve T sýnýfý fonksiyon çaðrý opeatörünü
+overload etmiþtir.
+
+
+Client kod, Functor sýnýfý türünden bir nesne tanýmlayýp fonksiyon þablonuna x'i argüman olarak geçti.
+Derleyici T türünün bu sýnýf türü olduðunu anladý. Derleyicinin yazdýðý kodda fonksiyon çaðrý operatörünün operandý
+bir sýnýf nesnesi olduðu için çaðrýlan fonksiyon sýnýfýn fonksiyon çaðrý operatör fonksiyonu oldu.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T f)
+{
+	f();
+}
+
+class Functor {
+public:
+	void operator()()
+	{
+		cout << "Functor::operator()" << endl;
+	}
+};
+
+int  main()
+{
+	Functor x;
+
+	func(x);
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+stl'deki birçok fonksiyon böyle, mesela algorithm baþlýk dosyasýndakiler.
+algorithm baþlýk dosyasýndaki find_if algoritmasýnýn birebiri yazýldý, Find_if(orjinali küçük harfli)
+2 tane template tür parametresi var. Fonksiyonun ise 3 tane parametre deðiþkeni var.
+Derleyici compile time'da kod yazabilmek için InIter ve F türünün ne olduðunu anlar.
+main içinde bir baðlý liste nesnesi oluþturuldu, list'in string açýlýmý türünden slist.
+fonksiyona yapýlan çaðrýda listenin begin'i, listenin en'i ve de üçüncü parametre olarak mypred fonksiyonu geçildi.
+Bu Find_if þablonundan herhangi bir veri yapýsýnda herhangi bir deðeri aramak için onlarca ayrý fonksiyon yazýlabilir.
+mypred fonksiyonu ise bool'a geri dönen bir fonksiyon, parametre olarak aldýðý string'in uzunluðu 5 ise true döner.
+Derleyici InIter türünün hangi tür olduðunu fonksiyon çaðrýsýndaki ilk iki parametreye bakarak anlar.
+slist.begin() fonksiyonunun geri dönüþ deðeri list'in string açýlýmýnýn iteratörü türü. Derleyici geri dönüþ deðeri
+list'in string açýlýmýnýn iteratoru türü olan, birinci parametre ve ikinci parametre deðiþkeni list'in string 
+açýlýmýnýn iteratoru türünden olan üçüncü parametresi de geri dönüþ deðeri bool, parametresi const string & olan
+bir fonksiyon göstericisi olan fonksiyonu yazar.
+Find_if fonksiyonu geçilen aralýktaki stringlerden her biri için döngünün her turunda, adresi alýnan fnc fonksiyonunu
+çaðýrýr, fnc true dönerse o iterator deðerini return eder. Aranan deðer bulunmazsa beg ile döndüðüne göre, o range'in
+end iteratörü deðerini döndürür.
+uzunluðu 5 olan ilk string ile döner.
+//////////////////////////////////////////////////////////////////
+template<typename InIter, typename F>
+InIter Find_if(InIter beg, InIter end, F fnc)
+{
+	while (beg != end) {
+		if (fnc(*beg))
+			return beg;
+		++beg;
+	}
+	
+	return beg; 
+}
+
+bool mypred(const string &r)
+{
+	return r.size() == 5;
+}
+
+int  main()
+{
+	list<string> slist{ "ali", "huseyin", "aykut", "tayfun", "poyraz", "fethi" };
+
+	auto iter = Find_if(slist.begin(), slist.end(), mypred);
+
+	if (iter != slist.end()) {
+		cout << "bulundu " << *iter << endl;
+	}
+	else
+		cout << "bulunamadi" << endl;
+
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+
+Uzunluðu 5 deðil 6 olan için yeni bir fonksiyon yazýlýp, üçüncü parametre olarak bu fonksiyon geçilir.
+Bunu otomatik hale getirmek için ise bir sýnýf oluþturulur. LenPred isminde bir sýnýf oluþturuldu.
+Sýnýfýn fonksiyon çaðrý operatör fonksiyonu mevcut, bu fonksiyon bir yukarýdaki örnekteki mypred'e benzer bir iþ
+yapar. Parametre olarak aldýðý string'in uzunluðuna bakar, bu uzunluk mlen'e eþitse true döner. mlen ise sýnýfýn
+private veri elemaný, constructor ile set edilir.
+Main'de Find_if'e yapýlan çaðrýda üçüncü parametre olarak LenPred sýnýfý türünden bir geçici nesne kullanýlýr.
+Geçici nesne istenilen uzunluk deðerini parametre olarak alýp öyle construct edilir.
+Bu durumda derleyicinin yazacaðý fonksiyonun F template tür parametresi LenPred olacak, böylece fonksiyona LenPred
+türünden bir deðer gönderilir.
+Böyle sýnýflara functor sýnýflar denir.
+//////////////////////////////////////////////////////////////////
+template<typename InIter, typename F>
+InIter Find_if(InIter beg, InIter end, F fnc)
+{
+	while (beg != end) {
+		if (fnc(*beg))
+			return beg;
+		++beg;
+	}
+	
+	return beg; 
+}
+
+class LenPred {
+	int mlen;
+public:
+	LenPred(int len) : mlen{len} {}
+	bool operator()(const string &s)
+	{
+		return s.size() == mlen;
+	}
+};
+
+int  main()
+{
+	list<string> slist{ "ali", "huseyin", "aykut", "tayfun", "poyraz", "fethi" };
+	cout << "uzunluk degerini girin : ";
+	int len;
+	cin >> len;
+
+	auto iter = Find_if(slist.begin(), slist.end(), LenPred{len});
+
+	if (iter != slist.end()) {
+		cout << "bulundu " << *iter << endl;
+	}
+	else
+		cout << "bulunamadi" << endl;
+
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+Fonksiyon template'leri de birbirini overload edebilir.
+func ismi ile çaðrýlacak fonksiyona, iki argüman gönderilirse yukarýdaki template'den, tek argüman gönderilirse
+aþaðýdaki template'den açýlým yapýlacak.
+Ýlk çaðrýda yukarýdaki template kullanýlýr ve T türü float olarak deduce edilir.
+Ýkinci çaðrýda ise alttaki template kullanýlýr T türü ise unsigned int.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x, T y)
+{
+	std::cout << "func(T x, T y) typename T is: " << typeid(T).name() << std::endl;
+}
+
+template<typename T>
+void func(T x)
+{
+	std::cout << "func(T x) typename T is: " << typeid(T).name() << std::endl;
+}
+int  main()
+{
+	func(4.5f, 3.4f);
+	func(9u);
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+Diðer önemli bir durum ise, bir fonksiyon ile bir template'in bir arada olmasý.
+Bu isimde fonksiyona, gerçek fonksiyonun parametresi ile exact match olan bir argüman verilirse gerçek fonksiyon
+çaðrýlýr, aksi halde template'den fonksiyon yazýlýr.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x)
+{
+	std::cout << "template func(T x) typename T is: " << typeid(T).name() << std::endl;
+}
+
+void func(double dval)
+{
+	std::cout << "non template func(double dval)" << endl;
+}
+int  main()
+{
+	func(3u);  //template func
+	func(3.f); //template func
+	func(3.4); //non template func
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+Sadece belirli bir tür için çaðrýlacak bir fonksiyon þu þekilde yazýlabilir.
+Bir template fonksiyon bildirilir ve de bu fonksiyon delete edilir.
+Bir de gerçek fonksiyon yazýlýr. Bu durumda sadece gerçek fonksiyonun parametre türü için yapýlan çaðrýlar
+geçerli olur, baþka türlerle yapýlan çaðrýlar geçersiz.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x) = delete;
+
+void func(double dval)
+{
+	std::cout << "non template func(double dval)" << endl;
+}
+int  main()
+{
+	func(3.5);
+	func(5); //geçersiz
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+Üstteki template de, alttaki template de func(&x) çaðrýsýna uygun.
+Templateler ayrý ayrý yoruma alýnýp sadece biri varken çaðrý yapýlýrsa her ikisi için de çaðrý geçerlidir.
+Ýlk template için T'nin türü int *; ikinci template içinse T'nin türü int olur.
+Bu iki fonksiyon birden açýkken hangi durumda hangi template'in seçileceðine dair dilin bazý farklý kurallarý
+var, buna ordering rules denir.
+Daha spesifik olanýn önceliði var.
+T türünün int olmasýyla, int * olmasý arasýnda, T'nin int olarak çýkarýmýnýn yapýlmasýnýn diðerine göre üstünlüðü
+var. 
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x)
+{
+	std::cout << "template function func(T x) type T is : " << typeid(T).name() << std::endl;
+}
+
+template<typename T>
+void func(T *ptr)
+{
+	std::cout << "template function func(T *ptr) type T is : " << typeid(T).name() << std::endl;
+}
+
+int  main()
+{
+	int x = 10;
+	func(&x); //alttaki template için fonksiyon yazýlýr.
+} 
+//////////////////////////////////////////////////////////////////
+Bir fonksiyon çaðrýsýndaki argüman eðer birden fazla template için uygunsa arkaplanda ordering rules devreye girer.
+Seçim kriterinde daha kompleks çýkarýmlar daha yüksek seçilebilirlik özelliðine sahip.
+
+
+
+Aslýnda C++11 öncesi sadece sýnýf þablonlarýna bir özellikti, C++11 ile birlikte fonksiyon þablonlarýna da tanýnan
+bir hak haline geldi: Varsayýlan Template Tür Parametresi
+Öyle bir template var ki, template tür parametresine herhangi bir tür argümaný verilmediðin zaman sentaksta 
+belirlenen tür verilmiþ kabul ediliyor.
+template<typename T = int>: Ya T'nin ne olduðu derleyiciye söylenecek ya da eðer söylenmezse derleyici T'nin int
+olduðu bilgisini elde edecek.
+//////////////////////////////////////////////////////////////////
+template<typename T = int>
+class Myclass {
+public:
+	Myclass() {
+		std::cout << "type T is : " << typeid(T).name() << std::endl;
+	}
+};
+
+int  main()
+{
+	Myclass<double> mx; // T türü double
+	Myclass <> my; // T türü int
+} 
+//////////////////////////////////////////////////////////////////
+Buna varsayýlan template tür parametresi denir.
+
+
+
+Burada da týpký fonksiyonlarýn varsayýlan argüman alabilmesi gibi soldaki bir template tür parametresi varsayýlan
+tür argümaný aldýðýnda onun saðýndakilerinin hepsinin almasý gerekiyor. Yani;
+template<typename T = int, typename U> gibi bir ifade doðrudan sentaks hatasý, geçersiz.
+//////////////////////////////////////////////////////////////////
+template<typename T = int, typename U = double>
+class Myclass {
+public:
+	Myclass() {
+		std::cout << "type T is : " << typeid(T).name() << std::endl;
+		std::cout << "type U is : " << typeid(U).name() << std::endl;
+	}
+};
+
+int  main()
+{
+	Myclass<long, char> mx; // T'nin türü long, U'nun türü char
+	Myclass<long> my; //T'nin türü long, U'nun türü double
+	Myclass<> mz; //T'nin türü int, U'nun türü double
+} 
+//////////////////////////////////////////////////////////////////	 
+
+
+
+Zaten sýnýf þablonlarýnda mecburi olan, fonksiyon þablonlarýnda da kullanýlabilen bir özellik daha var.
+Türün ne olduðunu programcý olarak biz de söyleyebiliriz.
+Aþaðýdaki þablon için, func(10); çaðrýsý yapýldýðýnda derleyici T'nin int olduðu çýkarýmýný kendisi yapar.
+Ancak func<int>(10); ifadesinde artýk çýkarým yok, hangi argüman gönderilirse gönderilsin derleyici T türünü
+<> içne geçilen tür olarak alýr.
+Açýk, explicit olarak template tür parametrelerinin ne olduðunu derleyiciye söyleyebiliriz.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x)
+{
+	std::cout << "type T is : " << typeid(T).name() << std::endl;
+}
+
+int  main(){
+
+	func<int>(10);
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+Bu birden fazla template tür parametresine de uygulanabilir.
+func<double>(4, 2) ifadesinde bir tür explicit olarak belirtildiðinden, birinci template tür parametresinin
+double olmasý gerektiði söylendi, ikinci için ise yine derleyici kendi çýkarým yapacak. Ýlk parametre için 4 
+gönderilmesine raðmen deduction istenmiyor, T türü double olur, U türü ise çýkarýmla int olur.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+void func(T x, U y)
+{
+	std::cout << "type T is : " << typeid(T).name() << std::endl;
+	std::cout << "type T is : " << typeid(U).name() << std::endl;
+	std::cout << "**********************************************\n";
+}
+
+int  main(){
+
+	func(12, 4.5); 
+	func<double>(4, 2);
+	func<int, char>(4, 'A');
+} 
+//////////////////////////////////////////////////////////////////
+
+
+
+C++11 öncesinde template'ler ile ilgili tipik bir problem mevcuttu, problemin çözümü farklý yýllarda gelen
+standartlar ile farklý þekillerde çözülmeye çalýþýldý.
+Bir fonksiyon yazýlmak isteniyor ve bu fonksiyon iki tane deðeri toplama iþleminde kullanýlacak. Ýlk baþta 
+þöyle bir þablon yazýlýyor.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+T add(T x, T y)
+{
+	return x + y;
+}
+
+int  main(){
+
+	//derleyici türler için kendi çýkarým yapar
+	cout << add(2, 6) << endl; 
+	cout << add(2.1, 6.4) << endl;
+
+	string s1{ "eda" };
+	string s2{ "naz" };
+
+	cout << add(s1, s2) << endl;
+
+} 
+//////////////////////////////////////////////////////////////////
+
+
+Ancak client kodlarýn bu template'den hareketle add(3, 4.5) gibi iþlemleri de yapabilmesi isteniyor. Ancak
+ikisi ayný tür olmadýðý için sentaks hatasý.(ambiguity)
+
+
+Yukarýdaki ambiguity'yi aþmak için C++2003'deki çözüm þu þekilde:
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+T add(T x, U y)
+{
+	return x + y;
+}
+int main()
+{
+	cout << add(3, 4.5) << endl;
+}
+//////////////////////////////////////////////////////////////////
+Tabi buradaki problem de, geri dönüþ deðerinin türü ne olacak ? 
+Fonksiyona main'de geçilen birinci argümanýn türü int, fonksiyonun geri dönüþ deðeri de o türden olduðu için
+mevcut durumda veri kaybý oluþur.
+Fonksiyon U türüne geri dönseydi de bu sefer add(4.5, 3) çaðrýsýnda yine veri kaybý olmuþ olacaktý.
+
+
+
+Önceleri yapýlan çözümde üçüncü bir template tür parametresi verilirdi.
+Fonksiyonun geri dönüþ deðerinin türü bu R türünden yapýlýrdý. Geri dönüþ deðerini ise fonksiyonu çaðýranýn
+kendisi belirlemeliydi.
+add<double>(3.7, 4); çaðrýsýndan görüleceði üzere geri dönüþ deðerinin türü double.
+Fonksiyona geçilen parametrelerin sýrasý ile ilgili oluþan ambiguity problemi de burada çözülmüþ durumda.
+//////////////////////////////////////////////////////////////////
+template<typename R, typename T, typename U>
+R add(T x, U y)
+{
+	return x + y;
+}
+
+int main()
+{
+	cout << add<double>(3.7, 4) << endl;
+	cout << add<double>(9, 4.5) << endl;
+
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+C++11 ile, daha pratik bir çözüm bulundu.
+trailing return type diye bir terim ortaya atýlýyor. trailing return type herhangi bir fonksiyona da 
+uygulanabilir, yani normal fonksiyonlar için de geçerli bir sentaks özelliði. Ancak normal bir fonksiyona
+uygulamanýn bir faydasý yok. Örnek olarak normalde bir sayýnýn karesi ile geri dönen bir fonksiyon þöyle
+yazlýr:
+//////////////////////////////////////////////////////////////////
+int square(int)
+{
+	return x * x;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+trailing return type kullanýlarak ise fonksiyon þu þekilde yazýlabilir:
+//////////////////////////////////////////////////////////////////
+auto square(int) ->int
+{
+	return x * x;
+}
+//////////////////////////////////////////////////////////////////
+Bu fonksiyonun geri dönüþ deðerinin int olduðu anlamýna gelir. Zaten normal fonksiyonlar için böyle bir
+yazýmýn bir anlamý yok. Bu templateler için geliþtirilmiþ bir özellik.
+
+
+
+Yukarýda yapmýþ olduðumuz add fonksiyonu örneðinde aslýnda fonksiyonun geri dönüþ deðeri x + y; ifadesinin
+geri dönüþ deðeri olsa bir veri kaybý olmaz. Bir ifadenin türünün ne olduðunu gösteren decltype niteleyicisi
+kullanýlýr.
+decltype(x+y) ifadesi yazýldýðýnda, bu x+y ifadesinin türü anlamýna gelir. Yani fonksiyonun geri dönüþ
+deðerinin türü x+y ifadesinin türü olur. 
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+decltype(x+y) add(T x, U y)
+{
+	return x + y;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+trailing return type sentaksýnýn ortaya çýkmasýnýn sebebi ise x+y'nin scope'u içinde olmamamýz.
+Fonksiyonun geri dönüþ deðerinin yazýldýðý yerde x ve y görünmüyor, bilinir deðiller. O yüzden sýrf
+scope'a dahil etmek için oraya auto yazýlýr. Fonksiyonun geri dönüþ deðerinin türü ise -> yanýna yazýlýr.
+Bu durumda, x+y ifadesinin türü neyse derleyicinin yazdýðý fonksiyonun geri dönüþ deðerinin türü o olur.
+Böylece üçüncü bir template tür parametresine de gerek kalmaz.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+auto add(T x, U y) -> decltype(x+y)
+{
+	return x + y;
+}
+
+int main()
+{
+	cout << add(2.4, 5) << endl;
+	cout << add(5, 2.4) << endl;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+C++14 ile ise artýk decltype kullanýmýna da gerek yok.
+Doðrudan fonksiyonun geri dönüþ deðerine auto yazýldýðýnda derleyici otomatik olarak geri dönüþ deðeri
+türünü anlayýp ona göre kod üretir.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+auto add(T x, U y)
+{
+	return x + y;
+}
+
+int main()
+{
+	cout << add(2.4, 5) << endl;
+	cout << add(5, 2.4) << endl;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+18_02_2018_PAZAR
+
+
+auto ile yapýlan deduction ile, templateler'de yapýlan deduction bir istisna dýþýnda tamamen ayný.
+//////////////////////////////////////////////////////////////////
+int func();
+
+template<typename T>
+void foo(T y);
+
+int main()
+{
+	auto x = func(); //x'in türü int
+
+	foo(14);
+}
+//////////////////////////////////////////////////////////////////
+T türü int, çünkü gönderilen argüman int. T türünün ne olduðunu belirleyen foo'ya gönderilen argüman.
+x'in ne olduðunu belirleyen ise = operatörünün yanýndaki ifade.
+Kurallar birebir ayný, T türünün ne olduðu nasýl belirleniyorsa x'in türünün ne olduðu da öyle belirlenir.
+x adeta template fonksiyondaki parametre deðiþkeni gibi, ona ilk deðer veren ifade de sanki template
+fonksiyona gönderdiðimiz argüman.
+
+
+x'in türü int. Buradaki kurallar ile diðer kurallarýn hiç bir farký yok. Bir tane template olsaydý,
+template tür parametresi T olsaydý(T & deðil) o template'e ci'yi argüman olarak gönderseydik const int
+deðil int olurdu, burada da ayný kural geçerli.	
+//////////////////////////////////////////////////////////////////
+const int ci = 5;
+
+auto x = ci;
+//////////////////////////////////////////////////////////////////
+
+
+
+Þimdi ise ikinci kategoriye denk geldi. Template tür parametresi T, template fonksiyonunun parametresi T &.
+//////////////////////////////////////////////////////////////////
+const int ci = 5;
+
+auto &x = ci;
+//////////////////////////////////////////////////////////////////
+
+
+Yani auto'da kullanýlan deduction ile template fonksiyonun parametre deðiþkeninin türü için yapýlan
+deduction arasýnda pek fark yok, tek fark initializer list kullanýmýnda.
+
+
+Aynýsý range based for loop için de geçerli, orada da type deduction var.
+vector<string> svec; isimli vektörün string açýlýmý türünden bir svec nesnesi olsun
+for(auto s : svec) ifadesinde, referans deklaratörü yok, kopyalama yapýlýr yani döngünün her turunda s,
+svec'de tutulan öðenin kendisi deðil o öðe ile ilk deðerini alan baþka bir string nesnesi. s deðiþtirilirse
+svec'deki öðe deðiþmez.
+for(auto &s : svec) bu durumda s, vektördeki öðenin kendisi.
+for(const auto &s : svec) yine vektördeki öðenin kendisi ama salt okuma amaçlý.
+
+
+
+Class Templates (Sýnýf Þablonlarý)
+
+STL demek aðýrlýklý olarak fonksiyon ve sýnýf þablonlarý demek. Tabi onun da kendi içinde ayrý kategorileri
+var mesela fonksiyon þablonlarý, algoritmalar. Fonksiyon þablonlarýný vermesinin sebebi, bir veri yapýsýnda
+önceden belirlenmiþ bir iþin yapýlmasý için gereken kodun üretilmesi. Örnek olarak arama, veri yapýsýnda
+arama yapýlmak isteniyorsa baðlý liste de olsa, vektör de olsa, deque de olsa arama ayný isim ile yapýlýr.
+Fakat aslýnda derleyici duruma göre compile time'da ayrý fonksiyonlar yazar. Ayný þablondan farklý veri
+yapýlarý için, compile time'da farklý kodlar yazar. 
+
+Sýnýf þablonu ise öyle bir metakod ki, derleyici o koddan compile time'da bir sýnýfýn kodunu yazar.
+Sýnýf þablonu olduðunda avantajlar daha da artar. String sýnýfý bunun en güzel örneði, string sýnýfý
+tamamen bir class template. Çok büyük bir sýnýf, çok sayýda fonksiyon var ama client kod bir fonksiyona 
+çaðrý yapmadýkça o fonksiyonun kodu yazýlmaz. Sýnýf þablonlarý en çok veri yapýlarýný implemente eden
+sýnýflarda iþe yarar. Dinamik dizi bir veri yapýsý, ama dinamik dizide int, double, string tutulabilir.
+Eðer dinamik dizi veri yapýsý int'e göre yazýlmýþ olsaydý, belirli veri elemanlarý int türden olurdu, bazý
+fonksiyonlarýn geri dönüþ deðeri türü int türden olurdu vs. String tutmak için ise yine ayný þekilde bu
+sefer int yerine string kullanýlýrdý. C tarzý void pointerlar ile de çözüm saðlanabilirdi belki ama C++'ýn
+çözümü bambaþka. Compile time'da o türe yönelik sýnýfýn kodu derleyici tarafýndan yazýlýr. Bir C kodunun
+veri yapýsý ile ilgili verimliliði neyse, C++'da sýnýf þablonlarý da en az o kadar verimli. 
+
+
+Sentaks, fonksiyon þablonlarýna benzer.
+Artýk T türü veya T'den elde edilecek diðer türler(T *, T &, const T & gibi) veri elemanlarýnýn türü olarak,
+fonksiyonlarýn parametrelerinin türü, geri dönüþ deðerlerinin türü olarak kullanýlabilir.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+class Myclass {
+
+};
+//////////////////////////////////////////////////////////////////
+
+
+Daha önceki konularda, ilkel de olsa bir akýllý pointer sýnýfý yazmýþtýk(operator overloading konusunda)
+T, smart pointer'ýn kontrol edeceði nesnenin türü.
+Constructor düþünüldüðünde, T türü int ise parametresi int *. T türü Window ise parametresi Window *.
+//////////////////////////////////////////////////////////////////
+template<typename T> 
+class SmartPtr {
+	T *mp;
+public:
+	SmartPtr(T *p) : mp{p} {}
+	~SmartPtr() { delete mp; }
+	T &operator*() { return *mp; }
+	T *operator->() { return mp };
+};
+
+int main()
+{
+	SmartPtr<string> sp{ new string{"Fethi"} };
+
+	cout << *sp << endl;
+
+	SmartPtr x; //geçersiz
+}
+//////////////////////////////////////////////////////////////////
+Yanlýz bu bir sýnýfýn kendisi deðil. SmartPtr x; ifadesi bu yüzden geçersiz, böyle bir sýnýf yok ki.
+Bu þablonun ismi, sýnýfýmýz ise bunun bir açýlýmý yani derleyiciye yazdýracaðýmýz sýnýf.
+SmartPtr<string> dediðimizde derleyici bu þablondan hareketle T türünün string türü olduðunu öðrenir,
+T türünün olduðu yerlerde string olacak þekilde kod yazar. Yukarýdaki kodda ok operatörü kullanýlmadý,
+bu yüzden ok operatörü fonksiyonunun kodunu derleyici yazmaz. Derleyici bu þablondan ihtiyaç olduðu
+zaman compile time'da farklý türler için kod yazar.
+
+
+Farklý iki sýnýf türünün birbirine atanabilmesi için bu iþi yapan bir fonksiyon olmasý gerekir.
+Ayný þablondan farklý türler için üretilmiþ sýnýflar farklý farklý sýnýflar, ayný template'den üretilmiþ
+olmalarý bu sýnýflarý ayný yapmaz.
+//////////////////////////////////////////////////////////////////
+template<typename T> 
+class Myclass {
+public:
+	void func(T x){}
+};
+
+int main()
+{
+	Myclass<double> m1;
+	Myclass<int> m2;
+
+	m1 = m2; //sentaks hatasý
+}
+//////////////////////////////////////////////////////////////////
+
+
+Ayný þekilde geçersiz, ikisi kesinlikle farklý türler.
+Bir sýnýf þablonunun belirli bir tür için açýlýmý ayrý bir sýnýf türü, baþka bir tür için açýlýmý ise
+farklý bir sýnýf türü. Ýlave bir mekanizma saðlanmazsa birbirine assignable veya convertible deðil.
+//////////////////////////////////////////////////////////////////
+int main()
+{
+	vector<double> dvec;
+	vector<int> ivec;
+
+	dvec = ivec;
+}
+//////////////////////////////////////////////////////////////////
+
+
+class Myclass{};
+Myclass sýnýfý türünden nesne tanýmlanabilir, bu türden bir pointer oluþturulabilir, elemanlarý bu türden
+olan bir dizi oluþturulabililr, fonksiyon parametresi ve geri dönüþ deðeri bu türden veya bu türden &
+olabilir.
+
+Bir þablondan üretilmiþ bir sýnýf içinde hiç fark yok.
+vector<int> func(const vector<double> &)
+C++'da son derece doðal bir kod. 
+
+
+Derleyici compile time'da T türünün int olduðunu anlarsa vector'un int açýlýmý kullanýlýr.
+STL'deki sýk kullanýlan mekanizmalardan. Bir fonksiyon þablonu baþka bir fonksiyon þablonunu açabileceði
+gibi, bu örnekte olduðu gibi bir fonksiyon þablonu bir sýnýf þablonunu da açabilir.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(T x)
+{
+	std::vector<T> xvec;
+}
+//////////////////////////////////////////////////////////////////
+
+
+Derleyici T türünün çýkarýmýný yaparken, yine bu fonksiyona ne gönderileceðine baðlý olarak çýkarým
+yapar. dvec fonksiyonun parametresi olan x referansýna aktarýlýr. Bu aktarýmýn yapýlmasý için T'nin türünün
+double olmasý gerekir.
+Fonksiyona bir vector nesnesi gönderiliyor, gönderilen vektor nesnesine baðlý olarak çýkarým yapýlýyor.
+Atamanýn yapýlmasý için T'nin double olmasý gerekiyor.
+Bir fonksiyon þablonu, bir sýnýf þablonunu tür çýkarýmýnda da bu þekilde kullanýlabilir, çok yaygýn 
+kullanýlan mekanizmalar.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+void func(std::vector<T> &x)
+{
+	T x{}; // x'in türü de double 
+}
+int main()
+{
+	vector<double> dvec;
+	func(dvec);
+}
+//////////////////////////////////////////////////////////////////
+
+
+Örnek olarak iki boyutlu bir dizi kullanmak istiyoruz. Ancak kullanýlacak matrisin satýr ve sütun sayýsý
+da çalýþma zamanýnda belli olacak. vector'ün int açýlýmý da bir sýnýf, vektor template'ini vektor'un int
+açýlýmý için tekrar açarsak, içinde vektor olan bir vektor oluþturulmuþ olur.	 
+//////////////////////////////////////////////////////////////////
+int main()
+{
+	vector<vector<int>> vec;
+	
+	///////////
+	
+	vec[12][34]+;
+}
+//////////////////////////////////////////////////////////////////
+vec öyle bir vektör ki, öðe olarak int vektörler tutar.
+Arada bazý baþka kodlar olduðu düþünülsün, köþeli parantez operatörü kullanýlabilir. Köþeli parantez
+operatörü ile vektörde tutulan öðeye eriþilir, o da vektör onun da köþeli parantez operatörü kullanýlýr.
+
+
+
+Bunlar farklý containerlar da olabilir. Öyle bir vektör oluþturulacak ki, vektördeki her bir öðe string
+listesi olacak. Bu vektöre bir öðe eklendiði zaman, string listesi eklenir.
+//////////////////////////////////////////////////////////////////
+
+int main()
+{
+	vector<list<>string> xvec;
+	
+	//////
+
+	xvec[2].front().size();
+}
+//////////////////////////////////////////////////////////////////
+xvec[2] bir baðlý liste, string baðlý listesi.
+xvec[2]. yapýldýðýnda . operatörü ile liste sýnýfýnýn interface'i görünür.
+Listenin front isimli fonksiyonu referans yolu ile baðlý listedeki ilk elemana eriþir.
+xvec[2].front() bir string olur.
+xvec[2].front().size(), xvec vektöründe tutulan üçüncü string baðlý listesinin tuttuðu ilk stringin
+uzunluðu elde edilmiþ oldu.
+Buradaki tüm kodlar compile time'da yazýlýyor.
+
+
+
+Sýnýf þablonlarýnda deduction yok, yani açýk açýk hangi türden açýlýmýn yapýlacaðý belirilmek zorunda.
+Tabi default olarak yok, basit bir teknik ile derleyiciye bunun çýkarýmý yaptýrýlabilir.
+Bir fonksiyon þablonu yazýlýr, buradan bir deduction yapýlýri çaðrýlan fonksiyon bir sýnýf nesnesi 
+döndürür tabi derleyici fonksiyon þablonunda tür çýkarýmý yaptýðý için sýnýf þablonunun da hangi türe
+açýlacaðýný derleyici compile time'da bilebilir.
+
+
+Fonksiyona birinci parametre olarak gönderilen nesne int türdense, derleyici T türünün int olduðu çýkarýmýný
+yapar. O zaman geri dönüþ deðeri ifadesinde de vector'un int açýlýmýný kullanýr. Dolayýsýyla fonksiyon
+vektörün int açýlýmý türünden bir nesne döndürür. n ise kaç tane öðe ile baþlatýlacaðý bilgisi için 
+vektörün constructor'ýna geçilir.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+std::vector<T> gvec(T x, size_t n)
+{
+	///
+	return vector<T>(n);
+}
+
+int main()
+{
+	int ival;
+
+	auto vec = gvec(ival, 50);  
+}
+//////////////////////////////////////////////////////////////////
+vec, gvec'in geri dönüþ deðeri türünden. gvec ise bir fonksiyon þablonu, derleyici gvec fonksiyon þablonuna
+çaðrý yapýldýðý için T türünün int olarak çýkarýmýný yaptý. Ýkinci parametreye de 50 gönderildi. Böylece
+vec içinde 50 tane int nesne tutan bir nesne haline geldi.
+
+
+
+Özellikle sýnýf þablonlarýnýn varsayýlan tür argümaný almasý STL'de çok sýk karþýlaþýlýr. STL containerlarý
+böyle.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U = int>
+class Myclass{
+}
+//////////////////////////////////////////////////////////////////
+Bu durumda, birinci template tür parametresi söylenir ancak ikincisi söylenmezse int anlaþýlýr.
+
+
+Vektörde bir template, ikinci template tür parametresi bildirimezse vektörün int açýlýmý türü kullanýlýr.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U = vector<int>>
+class Myclass {
+
+};
+//////////////////////////////////////////////////////////////////
+
+
+Burada ise örnek olarak Myclass int'e açýlýrsa, T türüni derleyici int olarak yorumlar.
+Bu durumda da ikinci parametreye vector'un T açýlýmýný default olarak açar.
+Myclass<int> çaðrýsý, Myclass<int, vector<int>> çaðrýsýna dönüþtürülmüþ olur.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U = vector<T>>
+class Myclass {
+
+};
+int main()
+{
+	Myclass<int> x;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+String sýnýfý için þöyle bir örnek verilebilir. Sýnýfýn türü gerçekten bu, bizim kullandýðýmýz string
+sýnýfý böyle bir sýnýf. Peki nasýl oluyor da string ifadesi bu anlama geliyor ?
+//////////////////////////////////////////////////////////////////
+int main()
+{
+	basic_string<char, char_traits<char>, allocator<char>> str{"necati"};
+
+	string s{"necati"};
+}
+//////////////////////////////////////////////////////////////////
+
+
+Bu template varsayýlan tür argümaný alýr, template aslýnda þu þekilde;
+3 tane template tür parametresi var. Ortada bir sýnýf þablonu var.
+Ýkinci ve üçüncü template tür parametreleri varsayýlan tür argümaný alýrlar.
+BasicString<char> idadesi aslýnda BasicString<char, char_traits<char>, allocator<char>> ifadesine
+dönüþtürülür. Bunun üstüne bir de typedef bildirimi yapýlmýþ, eðer BasicString char türüne açýldýysa o
+türe string denmiþ. Yani aslýnda BasicString<char, char_traits<char>, allocator<char>> türü string türüne
+typedef edilmiþ.
+//////////////////////////////////////////////////////////////////
+template<typename C, typename T = char_traits<char>, typename A = allocator<C>>
+class BasicString{
+};
+typedef BasicString<char> string
+//////////////////////////////////////////////////////////////////
+
+
+Template sentaksýný yazmak zaman zaman zor olduðundan birçok durumda typedef bildirimleri sýk kullanýlýr.
+Ancak modern C++'da typedef bildirimleri yerine geçen using yapýsý da kullanýlýr.
+//////////////////////////////////////////////////////////////////
+//typedef int word;
+using word = int;
+
+//typedef int(*FCMP)(const char *, const char *);
+using FCMP = int(*)(conar char *, const char*);
+//////////////////////////////////////////////////////////////////
+
+
+using, typedef ile tamamen ayný þey deðil. using ile yapýlabilen ancak typedef ile yapýlamayan bazý 
+bildirimler var. using'in eklenmesi motivasyonlarýndan biri de bu.
+typedef bildirimleri template olarak yapýlamaz ancak using bildirimleri template olarak yapýlabilir.
+
+Artýk VSvec ismi kullanýldýðýnda açýsal parantez kullanmaya gerek yok. typedef bildirimleri template olarak
+yapýlamazdan kastedilen bu deðil. Bu typedef ile de yapýlabilir, using ile de. 
+Bir typedef ismi baþka bir typedef isminde de kullanýlabilir.
+//////////////////////////////////////////////////////////////////
+typedef std::vector<std::vector<std::string>> VSvec; //typedef kullanýlarak geçerli
+typedef std::vector<std::string> Svec; //Svec artýk doðrudan içinde string tutan vektör türünün typedef'i
+typedef std::list<Svec> Con; //Svec burada kullanýlabilir, Con içinde string vektörü tutan baðlý liste
+							 //türünün typedef ismi
+//////////////////////////////////////////////////////////////////
+
+
+STL'in en çok kullanýlan yapýlarýndan(struct) biri pair yapýsý(utility baþlýk dosyasý içinde)
+pair, iki tane türü tek bir türmüþ gibi kullanmaya olanak saðlayan, olabilecek en basit template.
+En fazla kullanýldýðý yer bir fonksiyondan iki tane deðer döndürmek için. Ýki tür bir arada paketlenmek
+isteniyor ama bu ayrý bir tür olmayý hakedecek kadar da özel deðil. Yani ortada interface'i hakedecek bir
+durum olmaz, tek neden bunlarýn fonksiyondan birlikte aktarýlmasý. Bu tür durumlarda pair sýk kullanýlýr.
+C++11 ile standart hale gelen tuple'lar da bu iþ için kullanýlýr, tuple'lar pair'in çoklusu. 2 tane tür
+paketlenmek isteniyorsa pair, daha fazlasý için ise tuple. Pair þöyle bir tür;
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+struct Pair {
+	T first;
+	U second;
+};
+
+int main()
+{
+	pair<int, double> idp; //orjinal STL'deki pair sýnýfý
+
+}
+//////////////////////////////////////////////////////////////////
+Pair bir yapý, elemanlarý public olan bir template class. Ýki öðesi var, birinci data member', T türünden
+diðeri ise U türünden. Pair<int, double> idp ifadesi ile template türünden bir sýnýf yazdýrýlýr, T türü 
+olarak int, U türü olarak double alýnýr.
+
+
+Pair sýnýfýnýn default constructor'ý þöyle yazýlmýþ: Primitif veri öðeleri söz konusu olduðunda first ve
+second 0'a çekilir.
+//////////////////////////////////////////////////////////////////
+int main()
+{
+	pair<int, double> idp;
+
+	cout << idp.first << "  " << idp.second << endl;
+}
+//////////////////////////////////////////////////////////////////
+
+
+Eðer T veya U türleri, user defined türlerdense onu da default constructor'ý ile çaðýrýr.
+Arkaplandaki kod sanki þu þekilde:
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+struct Pair{
+	T first;
+	U second;
+	Pair() : first{}, second{} {} //default constructor
+	Pair(const T &t, const U &u) : first{t}, second{u} {} //parametreli constructor
+}
+//////////////////////////////////////////////////////////////////
+C++'da; int x{}; þeklinde primitif türlerden bir deðiþkende oluþturulabilir. C'de geçerli olmayan bu 
+sentaks C++'da primitif türler için geçerli ve deðiþkenin deðerini oluþtuktan sonra 0'a çeker. Yukarýdaki
+default ctor düþünüldüðünde eðer first veya second primitif türlerdense deðeri 0 olacak, user defined
+türlerdense de default constructor'larý çaðrýlacak.
+
+
+Pair sýnýfý için aþaðýdaki gibi bir örnek verilebilir. Öncelikle pair sýnýfý türünden;
+pair<Date, string> dsp{ x, s }; dsp nesnesi oluþturulur. Burada x Date türünden, s ise string türünden.
+Ayný zamanda pair sýnýfýnýn orjinal make_pair isimli bir fonksiyon þablonu var, bu fonksiyonu kullanarak
+doðrudan tür belirtip açýlým yapýlmadan da pair türünden sýnýf nesnesi oluþturulabilir. make_pair 
+fonksiyonuna benzer bir Make_pair þekildeki gibi yazýlmýþtýr. Fonksiyon þablonu pair türünden bir geçici
+nesne ile geri dönerek, fonksiyon þablonu olduðundan türler için derleyici çýkarým yapýp pair'i oluþturur.
+Derleyici make_pair(x, s); ifadesinde compile time'da x ve s'nin türünün çýkarýmý yapar, fonksiyonun
+geri dönüþ deðerinin türünü de ona göre belirler. Template sentaksý hiç kullanýlmadan bir pair oluþturuldu.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+std::pair<T, U>Make_pair(const T &t, const U &u)
+{
+	return pair<T, U>{t, u};
+}
+int main()
+{
+	Date x{ 12, 5, 1987 };
+	string s{ "ali aksoy" };
+
+	//pair<Date, string> dsp{ x, s };
+
+	auto dsp = make_pair(x, s);
+}
+//////////////////////////////////////////////////////////////////
+
+
+Ýþte using bildiriminin eklenme nedeni aþaðýdaki sentaks. using bildiriminin þablonlaþtýrýlmýþ hali.
+Spair bir template tür olarak kullanýlýr ve onun int açýlýmý alýnýrsa o pair'in string ve int açýlýmý olur.
+Bunun typedef ile yapýlmasý mümkün deðil. Böyle template haline getirilmiþ typedef bildirimleri için
+using bildirimi kullanýlýr.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+using Spair = std::pair<string, T>;
+
+int main()
+{
+	Spair<int> x; //pair<string, int>
+	Spair<Date> y; //pair<string, Date>
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+Bir baþka örnek ise set. Aslýnda set þöyle bir template:
+less, STL'in yine template sýnýflarýndan biri. Ýkinci template tür parametresi olarak less kullanýldýðý
+zaman set'deki dizi küçükten büyüðe doðru. Ama küçükten büyüðe deðil, büyükten küçüðe doðru bir set
+oluþturulmak istenirse o zaman ikinci template tür parametresi buna uygun olarak verilmeli. O türün ismi
+ise greater.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename C = less<T>, typename A = allocator<T>>
+class Set{
+};
+//////////////////////////////////////////////////////////////////
+
+
+set'in string açýlýmý kullanýldý. ikinci template tür parametresi default olduðundan less<string>
+olmuþ oldu. Bu durumda setteki düzen küçükten büyüðe doðru oldu.
+//////////////////////////////////////////////////////////////////
+int main()
+{
+	set<string> myset { "deniz", "riza", "aykut", "huseyin" };
+
+	for (const auto &s : myset)
+		cout << s << " ";
+	cout << endl;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+Bunu büyükten küçüðe doðru yapmak için ise greater kullanýlýr; ikinci parametreye geçilir 
+set<string, greater<string>> türünden bir nesne oluþturulurdu.
+Hatta bir using bildirimi ile bunu doðrudan kullanmak þu þekilde mümkün yani greater<T> sabit olup
+yalnýzca T türüne deðer verilebilir. Böylece uzun uzun greater<string> açýlýmý yazýlmasýna gerek kalmaz.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+using Gset = std::set<T, std::greater<T>>;
+int main()
+{
+	Gset<string> myset { "deniz", "riza", "aykut", "huseyin" };
+
+	for (const auto &s : myset)
+		cout << s << " ";
+	cout << endl;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+x = y ifadesi farklý türler olduklarý için geçersiz.
+Ancak gerçek pair sýnýfý için a = b ifadesi geçerli.
+pair sýnýfýnda farklý türlerden pair'leri birbirine ataycak bir mekanizma var. Bizim yazdýðýmýz Pair'de yok.
+Bu mekanizmaya member template denir.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+struct Pair {
+	T first;
+	U second;
+};
+
+int main()
+{
+	Pair<double, double> x;
+	Pair<int, int> y;
+
+	x = y; //error
+
+	pair<double, double> a;
+	pair<int, int> b;
+
+	a = b; //geçerli
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+Myclass bir sýnýf þablonu. Bir üye fonksiyonu var, üye fonksiyonu da yine Myclass'ýn T açýlýmý türünden.
+Sýnýfýn scope'u içinde olunduðundan, Myclass<T> yerine doðrudan Myclass yazýlabilir.
+x.func(y)'nin geçerli olma sebebi, x Myclass'ýn double açýlýmý olduðundan, sýnýf için fonksiyonun parametre
+deðiþkeninin türü de Myclass<double> türünden, y nesnesi de ayný türden olduðundan geçerli.
+Ancak x.func(z) ifadesinde türler farklý olduðundan çaðrý geçersiz.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+class Myclass {
+public:
+	void func(Myclass);
+};
+
+int main()
+{
+	Myclass<double> x;
+	Myclass<double> y;
+	Myclass<int> z;
+
+	x.func(y); //geçerli
+	x.func(z); //geçersiz
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+Bu ifadenin legal olmasý için gereken, Myclass'ýn double açýlýmýnýn öyle bir func fonksiyonu olmalý ki
+parametresi Myclass'ýn int açýlýmý türünden olacak. Bunu derleyiciye yazdýrmak mümkün. Ýþte derleyiciye
+böyle kodlar yazdýrmaya yarayan yapýya member templates denir.
+tekrar bir template keywordü kullanýlýr ancak tür ismi olarak farklý bir isim kullanýlýr.
+Böylece fonksiyona Myclass<int> türünden bir argüman gönderilirse, derleyici U türünün int olmasý
+gerektiðini anlar ve fonksiyonu Myclass<int> açýlýmý türünden olacak þekilde parametreye sahip bir 
+fonksiyon yazar.
+
+//////////////////////////////////////////////////////////////////
+template<typename T>
+class Myclass {
+public:
+	template<typename U>
+	void func(Myclass<U>);
+};
+
+int main()
+{
+	Myclass<double> x;
+	Myclass<int> y;
+
+	x.func(y); //geçerli
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+pair sýnýfýnýn copy constructor'ý da bu þekilde yazýlmýþtýr. Bizim pair sýnýfýna benzeterek yazdýðýmýz
+Pair sýnýfý için copy constructor aþaðýdaki gibidir. Derleyici farklý türler için copy constructor için
+fonksiyon yazar. Tabi burada dikkat edilmesi gereken tür uyumunun korunmasý ayný þekilde gerekiyor. 
+Birbirlerine ilk deðer verebilir türler olmasý gerekiyor. Yani örnek olarak Pair'in string açýlýmýna, 
+Pair'in int, int açýlýmý atanýrsa bu fonksiyon çalýþýr, int string'i initialize edemediði için sentaks 
+hatasý olur. Böyle bir özellik var ama tabi tür uyumunun korunmasý gerekiyor. 
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+class Pair {
+	T first;
+	U second;
+public:
+	Pair() : x{}, y{} {}
+	template<typename X, typename Y>
+	Pair(const Pair<X, Y> &p) : first(p.first), second(p.second) {}
+};
+//////////////////////////////////////////////////////////////////
+
+
+make_pair("Murat", "Hasan") ifadesinin türü pair<const char *, const char *> açýlýmý.
+Yani ilk deðer veren ifade pair<const char *, const char *> türünden. p ise pair<strin, string> açýlýmý
+türünden. member template olmasa bu mümkün kýlýnmazdý.
+//////////////////////////////////////////////////////////////////
+int main()
+{
+	pair<string, string> p = make_pair("Murat", "Hasan");
+
+}
+//////////////////////////////////////////////////////////////////
+
+
+Bir template sýnýftan açýlan sýnýf, o template'in baþka bir açýlýmý ile ayrý bir türdür, bunlar 
+birbirine atanamaz. Ancak arkada member template yapýsý kullanýlmýþsa bu atama geçerli kýlýnabilir.
+
+
+
+Bir pair'i çýkýþ akýmýna vermek için yazýlan global operator<< fonksiyonu aþaðýdaki þekilde yazýlabilir.
+Bu operator<< fonksiyonu bir fonksiyon þablonu, böylece pair'in farklý açýlýmlarý için bu fonksiyon 
+kullanýlýr.
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+std::ostream & operator<<(std::ostream &os, const std::pair<T, U> &p)
+{
+	return os << "(" << p.first << ", " << p.second << ")";
+}
+
+int main()
+{
+	auto p1 = make_pair("hasan", "huseyin");
+	auto p2 = make_pair(bitset<32>{654321U}, 289);
+
+
+	cout << p1 << endl;
+	cout << p2 << endl;
+
+	cout << make_pair(p1, p2) << endl;
+}
+//////////////////////////////////////////////////////////////////
+
+
+iki tane pair karþýlaþtýrýlabilir. pair'in tüm karþýlaþtýrma operatörleri overload edilmiþtir.
+first'i küçük olan küçüktür, eðer firstler eþitse second'a bakýlýr. her ikisi de eþitse, ikisi de eþittir.
+
+
+Bütün containerlarýn begin ve end fonksiyonlarý var. Bir de global begin ve end fonksiyonlarý var.
+Örnek olarak bir vektor tanýmlanýyor ve de primitif int türden bir dizi var, peki nasýl oluyor da her 
+ikisi için de begin fonksiyonu kullanýlýr ? 
+//////////////////////////////////////////////////////////////////
+int main()
+{
+	vector<string> svec;
+	int a[100];
+
+	begin(svec);
+	begin(a);
+}
+//////////////////////////////////////////////////////////////////
+begin bir template fonksiyon, hem de global bir fonksiyon. 
+
+
+
+Bu, template'lerin özelliþtirilmesi ile mümkün. Öyle bir mekanizma ki farklý türler için farklý 
+template'lerin kullanýlmasýna olanak saðlar. Özelleþtirme(specialization) belirli türler için veya tür
+gruplarý için bir template yerine baþka bir template'in kullanýlmasýný saðlamak.	
+
+
+Myclass'ýn int dýþýndaki açýlýmlarý için yukarýdaki template kullanýlýr. Ancak int açýlýmlarý için
+aþaðýdaki template kullanýlýr. Derleyici bunu compile time'da seçer.
+Interface'lerin ayný olmasý gerekmiyor, aþaðýdaki Myclass interface'i yukarýdakinden tamamen de farklý 
+olabilir.
+Üstteki template için master template terimi kullanýlýr.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+class Myclass {
+public:
+	Myclass()
+	{
+		std::cout << "Myclass<T> typename T is : " << typeid(T).name() << std::endl;
+	}
+};
+
+template<>
+class Myclass<int> {
+public:
+	Myclass()
+	{
+		std::cout << "Myclass<int>" << std::endl;
+	}
+};
+
+int main()
+{
+	Myclass<double> dval;
+	Myclass<int> ival;
+
+}
+//////////////////////////////////////////////////////////////////
+Birinci template(Myclass<double>) üstteki template'den açýlýr. Ýkincisi ise alttaki template'den açýlýr.
+
+
+Bu da kullanýlan sentaks özelliklerinden biri. Pointer açýlýmlarý için aþaðýdaki template kullanýlýr.
+Pointer olmayan açýlýmlar için ise yukarýdaki kullanýlýr.
+//////////////////////////////////////////////////////////////////
+template<typename T>
+class Myclass {
+public:
+	Myclass()
+	{
+		std::cout << "Myclass<T> typename T is : " << typeid(T).name() << std::endl;
+	}
+};
+
+template<typename T>
+class Myclass<T *> {
+public:
+	Myclass()
+	{
+		std::cout << "Myclass<T *>" << std::endl;
+	}
+};
+
+int main()
+{
+	Myclass<int> x;
+	Myclass<string> s;
+	Myclass<double *>  z;
+}
+//////////////////////////////////////////////////////////////////
+
+
+Ýki template tür parametresi ayný olduðunda aþaðýdaki template'den açýlýr. Farklý olduklarýnda ise 
+yukarýdaki template'den açýlýr.	
+//////////////////////////////////////////////////////////////////
+template<typename T, typename U>
+class Myclass {
+public:
+	Myclass()
+	{
+		std::cout << "Myclass<T, U>" << std::endl;
+	}
+};
+
+template<typename T>
+class Myclass<T, T> {
+public:
+	Myclass()
+	{
+		std::cout << "Myclass<T, T>" << std::endl;
+	}
+};
+
+int main()
+{
+	Myclass<int, int> x{}; //alttakinden açýlýr
+	Myclass<int, double> y{}; //yukarýdakinden açýlýr
+}
+//////////////////////////////////////////////////////////////////
+
+
+STL'den bir örnek, vector sýnýf þablonunun bool açýlýmý bir özelleþtirme. vector'un diðer açýlýmlarý
+normal vector template'inden üretilir ama bool açýlýmý için ayrý bir template verilmiþ.
+bool, bir int'de tutulabilen bir veri o zaman vector'un bool açýlýmý gereksiz bellek alaný kullanmasýn,
+boolean deðerleri bit seviyesinde tutsun diye böyle bir farklýlýk yapýlmýþ. O yüzden vector'un bool
+açýlýmý baþka bir interface'e sahip.
+
+
+
+Normal bir sýnýfýn üye fonksiyonu template olabilir, bir engel yok.
+Myclass türünden bir nesne *this olarak kullanýlýp func fonksiyonuna onunla çaðrý yapýldýðýnda func'a
+hangi türden argüman gönderilirse derleyici o parametrik yapýda func fonksiyonu yazar. Fonksiyon 
+þablonlarýnda nasýlsa burada da öyle.
+//////////////////////////////////////////////////////////////////
+class Myclass{
+public:
+	template<typename T>
+	void func(T x)
+	{
+		std::cout << typeid(T).name() << std::endl;
+	}
+};
+int main()
+{
+	Myclass m;
+
+	m.func(10);
+	m.func(1.5);	
+	m.func(5L);
+}
+//////////////////////////////////////////////////////////////////
+
+
+STL'in önemli bazý sýnýflarý non-type parametre sýnýflarý, yani sadece sabitin ne olduðu bildirilir.
+Bunlardan biri bitset, bitsel iþlemler için tasarlanmýþ bir sýnýf. Bitsel manipülasyon iþlemleri bu
+sýnýfta yapýlabilir ve de C'de bitsel iþlemlerini yapmak ile ayný maliyette.
+bitset<16> ifadesi ile boyut olarak 16 bit olacaðý belirtilmiþtir.
+//////////////////////////////////////////////////////////////////
+int main()
+{
+	bitset<16> x{1234}; //bitset<16> ifadesinde non type parametre girilir, tür deðil boyut girilir.
+
+	cout << x << endl;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+non-type parametreli örnek bir sýnýf þablonu:
+random template'inden açýlým yapmak için derleyiciye low ve high sabitlerinin kaç olduðu geçilmeli.
+Derleyici random<30, 50> x; ifadesini gördüðünde yukarýdaki þablondan gerçek bir sýnýfýn kodunu yazarken
+low kullanýlan yerde 30 sabitini, high kullanýlan yerde 50 sabitini kullanýr.
+//////////////////////////////////////////////////////////////////
+template<size_t low, size_t high>
+class random {
+public:
+	int operator()() {
+		return rand() % (high - low + 1) + low;
+	}
+};
+
+
+int main()
+{
+	random<30, 50> x;
+}
+//////////////////////////////////////////////////////////////////
+
+
+
+
+24_02_2018_CUMARTESÝ
+
